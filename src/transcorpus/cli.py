@@ -42,7 +42,6 @@ def download_corpus(corpus_name, demo):
 
     if demo and "files_demo" not in corpus_urls[corpus_name]:
         raise ValueError(f"Demo files not available for corpus: {corpus_name}")
-
     files = "files_demo" if demo else "files"
 
     urls = [

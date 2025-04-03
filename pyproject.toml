@@ -24,6 +24,12 @@ dev-dependencies = [
     "pytest>=8.3.5",
 ]
 
+[tool.rye.scripts]
+ci_fmt = "rye fmt --check"
+ci_pylint = "pylint src"
+ci_test = "rye test"
+ci = { chain = ["ci_fmt", "ci_pylint", "ci_test"]}
+
 [tool.hatch.metadata]
 allow-direct-references = true
 
