@@ -9,12 +9,13 @@ on:
 
 jobs:
   tests:
-    name: "Python ${{ matrix.python-version }}"
-    runs-on: "ubuntu-latest"
-
     strategy:
       matrix:
+        os: ["ubuntu-24.04", "windows-2022", "macos-15"]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    name: "${{ matrix.os }} - Python ${{ matrix.python-version }}"
+    runs-on: "${{ matrix.os }}"
 
     steps:
       - uses: "actions/checkout@v4"
@@ -22,5 +23,11 @@ jobs:
         uses: eifinger/setup-rye@v4
         with:
           version: "latest"
-      - name: Rye lint
-        run: rye lint
+      - name: Rye fmt checking
+        run: rye fmt --check
+      #   - name: Rye lint
+      #     run: rye lint
+      - name: Pylint project
+        run: pylint src
+      - name: pytest tests
+        run: rye test

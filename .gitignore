@@ -15,3 +15,6 @@ data/*
 !data/corpus/.gitkeep
 !data/database/.gitkeep
 !data/models/.gitkeep
+
+# Misc.
+.DS_Store
