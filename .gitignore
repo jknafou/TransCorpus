@@ -1,0 +1,17 @@
+# python generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# venv
+.venv
+
+# data
+data/*
+# Allow .gitkeep files
+!data/corpus/.gitkeep
+!data/database/.gitkeep
+!data/models/.gitkeep
