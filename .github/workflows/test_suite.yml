@@ -28,6 +28,6 @@ jobs:
       #   - name: Rye lint
       #     run: rye lint
       - name: Pylint project
-        run: pylint src
+        run: rye run pylint src
       - name: pytest tests
         run: rye test
