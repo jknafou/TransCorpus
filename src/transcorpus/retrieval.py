@@ -2,8 +2,8 @@ import subprocess
 import os
 
 
-def download_file(url, dir):
-    file_name = os.path.join(dir, os.path.basename(url))
+def download_file(url, directory):
+    file_name = os.path.join(directory, os.path.basename(url))
 
     # Check if the file already exists
     if os.path.exists(file_name):
@@ -11,6 +11,6 @@ def download_file(url, dir):
         return
 
     try:
-        subprocess.run(["wget", url, "-P", dir], check=True)
+        subprocess.run(["wget", url, "-P", directory], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error downloading {url}: {e}")
