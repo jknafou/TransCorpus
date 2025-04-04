@@ -1,3 +1,4 @@
+from transcorpus.corpus_urls import corpus_urls
 import click
 import subprocess
 import os
@@ -29,14 +30,6 @@ def download_corpus(corpus_name, demo):
 
     CORPUS_NAME: Name of the corpus to download.
     """
-    corpus_urls = {
-        "bio": {
-            "files": ["PMID.txt", "title_abstract_en.txt"],
-            "files_demo": ["PMID_sample.txt", "title_abstract_en_sample.txt"],
-            "endpoint": "https://transcorpus.s3.text-analytics.ch/",
-        }
-    }
-
     if corpus_name not in corpus_urls:
         raise ValueError(f"Unknown corpus name: {corpus_name}")
 
