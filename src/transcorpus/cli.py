@@ -9,6 +9,7 @@ def cli():
 
 cli.add_command(retrieval.download_database)
 cli.add_command(retrieval.download_corpus)
+cli.add_command(retrieval.download_corpus_id)
 
 if __name__ == "__main__":
     cli()
