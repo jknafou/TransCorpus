@@ -37,14 +37,17 @@ TODO:
 
 transcorpus download-database bio -d
 transcorpus download-corpus bio -d
+transcorpus download-corpus-id bio -d
 
-transcorpus process-database bio
-transcorpus process-corpus bio
+transcorpus preview bio -d --count 1 --start-at 0 --language en
+
+transcorpus process-database bio # just to show and give people the possibility to modify a few steps...
+transcorpus process-corpus bio -d
 # database would have one step more so if people want to tweak it
 
 transcorpus split-corpus bio --n_split 16
 
-transcorpus translate bio --language_to fr --split 1
+transcorpus translate bio --target fr --split 1
 
 transcorpus merge-translated-corpus bio
 

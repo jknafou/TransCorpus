@@ -39,7 +39,10 @@ def download_data(data_type, domain_name, demo):
         + data_urls[domain_name][f"{data_type}_demo" if demo else data_type]
     )
 
-    download_file(url, transcorpus_dir + "/" + domain_name)
+    download_file(
+        url,
+        transcorpus_dir + "/" + domain_name + "/" + data_urls[domain_name]["language"],
+    )
 
 
 @click.command()
@@ -47,6 +50,13 @@ def download_data(data_type, domain_name, demo):
 @click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
 def download_corpus(corpus_name, demo):
     download_data("corpus", corpus_name, demo)
+
+
+@click.command()
+@click.argument("id_name")
+@click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
+def download_corpus_id(id_name, demo):
+    download_data("id", id_name, demo)
 
 
 @click.command()

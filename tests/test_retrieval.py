@@ -1,5 +1,7 @@
 import subprocess
-from transcorpus.retrieval import download_file
+import os
+import pytest
+from transcorpus.retrieval import download_file, download_data
 from transcorpus import transcorpus_dir
 from transcorpus.data_urls import data_urls
 from unittest.mock import patch, Mock
@@ -51,3 +53,44 @@ def test_failed_download(tmp_path):
 
         # Assert the function handles the error gracefully and returns None
         assert result is None
+
+
+# Test: Unknown domain name
+def test_unknown_domain():
+    with pytest.raises(ValueError, match="Unknown domain name: unknown"):
+        download_data("corpus", "unknown", demo=True)
+
+
+# Test: No demo available for the domain
+def test_no_demo_available():
+    with pytest.raises(ValueError, match="No corpus demos available for: test"):
+        download_data("corpus", "test", demo=True)
+
+
+@pytest.mark.parametrize(
+    "data_type, demo",
+    [
+        ("corpus", True),
+        ("id", True),
+        ("database", True),
+        ("corpus", False),
+        ("id", False),
+        ("database", False),
+    ],
+)
+@patch("transcorpus.retrieval.download_file")
+def test_path_format(mock_download_file, data_type, demo):
+    domain_name = "bio"
+
+    expected_url = (
+        data_urls[domain_name]["endpoint"] + data_urls[domain_name][f"{data_type}_demo"]
+    )
+    expected_path = os.path.join(
+        transcorpus_dir, domain_name, data_urls[domain_name]["language"]
+    )
+
+    # Call the function
+    download_data(data_type, domain_name, True)
+
+    # Assert that download_file was called with the correct arguments
+    mock_download_file.assert_called_once_with(expected_url, expected_path)
