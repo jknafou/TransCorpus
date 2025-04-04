@@ -7,16 +7,20 @@ import os
 
 def download_file(url, directory):
     file_name = os.path.join(directory, os.path.basename(url))
+    file_path = os.path.join(directory, file_name)
 
     # Check if the file already exists
     if os.path.exists(file_name):
         print(f"File already downloaded: {file_name}")
-        return
+        return file_path
 
     try:
         subprocess.run(["wget", url, "-P", directory], check=True)
+        return file_path
+
     except subprocess.CalledProcessError as e:
         print(f"Error downloading {url}: {e}")
+        return None
 
 
 def download_data(data_type, domain_name, demo):

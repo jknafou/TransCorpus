@@ -12,5 +12,6 @@ data_urls = {
         "corpus_id_demo": "PMID_sample.txt",
         "endpoint": "https://transcorpus.s3.text-analytics.ch/",
         "language": "en",
-    }
+    },
+    "test": "https://transcorpus.s3.text-analytics.ch/test.txt",
 }
