@@ -2,6 +2,9 @@ import click
 import subprocess
 import os
 
+home_dir = os.path.expanduser("~")
+trans_corpus_dir = os.path.join(home_dir, ".TransCorpus")
+
 
 def download_file(url, directory):
     file_name = os.path.join(directory, os.path.basename(url))
@@ -47,7 +50,7 @@ def download_corpus(corpus_name, demo):
     ]
 
     for url in urls:
-        download_file(url, "data/corpus/")
+        download_file(url, trans_corpus_dir)
 
 
 @click.command()
