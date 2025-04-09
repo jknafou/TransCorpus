@@ -1,0 +1,22 @@
+{
+    "test": {
+        "database": {
+            "file": "http://example.com/test.txt"
+        },
+        "corpus": {
+            "file": 
+                "http://example.com/test.txt"
+            ,
+            "demo": 
+                "http://example.com/test.txt"
+        },
+        "id": {
+            "file": 
+                "http://example.com/test.txt"
+            ,
+            "demo": 
+                "http://example.com/test.txt"
+        },
+        "language": "en"
+    }
+}

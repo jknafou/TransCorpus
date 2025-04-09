@@ -10,5 +10,29 @@
 #   universal: false
 
 -e file:.
+annotated-types==0.7.0
+    # via pydantic
+certifi==2025.1.31
+    # via requests
+charset-normalizer==3.4.1
+    # via requests
 click==8.1.8
     # via transcorpus
+idna==3.10
+    # via requests
+pydantic==2.11.2
+    # via transcorpus
+pydantic-core==2.33.1
+    # via pydantic
+requests==2.32.3
+    # via transcorpus
+tqdm==4.67.1
+    # via transcorpus
+typing-extensions==4.13.1
+    # via pydantic
+    # via pydantic-core
+    # via typing-inspection
+typing-inspection==0.4.0
+    # via pydantic
+urllib3==2.3.0
+    # via requests

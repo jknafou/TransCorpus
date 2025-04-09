@@ -8,6 +8,9 @@ authors = [
 license = "MIT"
 dependencies = [
     "click>=8.1.8",
+    "requests>=2.32.3",
+    "pydantic>=2.11.2",
+    "tqdm>=4.67.1",
 ]
 readme = "README.md"
 requires-python = ">= 3.9"
@@ -24,13 +27,22 @@ dev-dependencies = [
     "pytest>=8.3.5",
     "pytest-mock>=3.14.0",
     "pytest-cov>=6.1.0",
+    "types-requests>=2.32.0.20250328",
+    "types-tqdm>=4.67.0.20250404",
+    "docstring-gen>=0.4.0",
+    "pydocstyle>=6.3.0",
 ]
 
 [tool.rye.scripts]
-ci_fmt = "rye fmt --check"
-ci_pylint = "pylint src"
 ci_test = "rye test"
-ci = { chain = ["ci_fmt", "ci_pylint", "ci_test"]}
+ci_fmt = "rye fmt --check"
+ci_docstring = "pydocstyle src"
+ci_docstring_tests = "pydocstyle tests"
+ci_mypy = "mypy src"
+ci_mypy_tests = "mypy tests"
+ci_pylint = "pylint src"
+ci_pylint_tests = "pylint tests"
+ci = { chain = ["ci_fmt", "ci_pylint", "ci_pylint_tests", "ci_test", "ci_mypy", "ci_mypy_tests", "ci_docstring", "ci_docstring_tests"]}
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -40,3 +52,4 @@ packages = ["src/transcorpus"]
 
 [project.scripts]
 transcorpus = "transcorpus.cli:cli"
+

@@ -23,10 +23,18 @@ jobs:
         run: rye sync
       - name: Rye fmt checking
         run: rye fmt --check
-      #   - name: Rye lint
-      #     run: rye lint
-      - name: Pylint project
+      - name: Docstring src
+        run: pydocstyle src
+      - name: Docstring tests
+        run: pydocstyle tests
+      - name: Mypy src
+        run: mypy src
+      - name: Mypy tests
+        run: mypy tests
+      - name: Pylint src
         run: rye run pylint src
+      - name: Pylint tests
+        run: rye run pylint tests
 
   tests:
     strategy:

@@ -461,9 +461,9 @@ disable=raw-checker-failed,
         line-too-long,
         trailing-whitespace,
         trailing-newlines,
-        missing-module-docstring,
-        missing-function-docstring,
-        missing-class-docstring,
+      ;   missing-module-docstring,
+      ;   missing-function-docstring,
+      ;   missing-class-docstring,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -539,7 +539,7 @@ score=yes
 ignore-comments=yes
 
 # Docstrings are removed from the similarity computation
-ignore-docstrings=yes
+; ignore-docstrings=yes
 
 # Imports are removed from the similarity computation
 ignore-imports=yes
