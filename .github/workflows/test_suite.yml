@@ -24,13 +24,13 @@ jobs:
       - name: Rye fmt checking
         run: rye fmt --check
       - name: Docstring src
-        run: pydocstyle src
+        run: rye run pydocstyle src
       - name: Docstring tests
-        run: pydocstyle tests
+        run: rye run pydocstyle tests
       - name: Mypy src
-        run: mypy src
+        run: rye run mypy src
       - name: Mypy tests
-        run: mypy tests
+        run: rye run mypy tests
       - name: Pylint src
         run: rye run pylint src
       - name: Pylint tests
