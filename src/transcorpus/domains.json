@@ -4,17 +4,17 @@
             "file": "https://transcorpus.s3.text-analytics.ch/bibmed.tar.gz"
         },
         "corpus": {
-            "file": 
+            "file":
                 "https://transcorpus.s3.text-analytics.ch/title_abstract_en.txt"
             ,
-            "demo": 
+            "demo":
                 "https://transcorpus.s3.text-analytics.ch/title_abstract_en_sample.txt"
         },
         "id": {
-            "file": 
+            "file":
                 "https://transcorpus.s3.text-analytics.ch/PMID.txt"
             ,
-            "demo": 
+            "demo":
                 "https://transcorpus.s3.text-analytics.ch/PMID_sample.txt"
         },
         "language": "en"

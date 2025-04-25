@@ -75,7 +75,9 @@ from transcorpus.config import load_domains
         ),
     ],
 )
-def test_load_invalid_domains(tmp_path: Path, invalid_data: dict, expected_error: str):
+def test_load_invalid_domains(
+    tmp_path: Path, invalid_data: dict, expected_error: str
+):
     """
     Test the `load_domains` function with invalid domain data.
 

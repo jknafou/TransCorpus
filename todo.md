@@ -1,11 +1,13 @@
 - create a pypi package
-  - create github actions
   - create pypi login and token
-- add rye fmt / rye lint
-- add mypy
-- add some tests
-- make it compatible with multiple OS, aiohttp / httpx / requests
 
----
+-retrieval:
+ -id downloaded automatically with corpus if exisiting
 
-- define repository structure
+-preview:
+ -write test function, with a few thinking in :
+  -translation side by side with text of different sizes?
+  -what if no ids are given?
+  -shouldn't we give two type of ids, let's say I want to display a pmid, I don't want to look for it...ids, let's say I want to display a pmid, I don't want to look for it...
+
+-translate:

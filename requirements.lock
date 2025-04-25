@@ -24,6 +24,8 @@ pydantic==2.11.2
     # via transcorpus
 pydantic-core==2.33.1
     # via pydantic
+readchar==4.2.1
+    # via transcorpus
 requests==2.32.3
     # via transcorpus
 tqdm==4.67.1

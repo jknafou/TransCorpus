@@ -1,9 +1,10 @@
 """
 TransCorpus Configuration Module.
 
-This module provides functionality for loading domain configurations from a JSON file.
-The main function, `load_domains`, reads and validates the configuration file, ensuring
-it adheres to the expected structure defined by the `DomainData` model.
+This module provides functionality for loading domain configurations from a JSON
+file. The main function, `load_domains`, reads and validates the configuration
+file, ensuring it adheres to the expected structure defined by the `DomainData`
+model.
 
 Functions:
     - load_domains: Loads and validates domain configurations from a JSON file.
@@ -34,14 +35,15 @@ def load_domains(json_path: Path) -> dict[str, DomainData]:
         json_path (Path): The path to the JSON configuration file.
 
     Returns:
-        dict[str, DomainData]: A dictionary where keys are domain names and values
-        are validated `DomainData` objects.
+        dict[str, DomainData]: A dictionary where keys are domain names and
+        values are validated `DomainData` objects.
 
     Raises:
         ValueError: If the configuration is invalid or the file is not found.
             - Invalid configuration: Raised when the JSON data does not match
               the expected structure defined by the `DomainData` model.
-            - File not found: Raised when the specified JSON file does not exist.
+            - File not found: Raised when the specified JSON file does not
+            exist.
 
     Example:
         >>> from pathlib import Path

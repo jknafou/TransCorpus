@@ -24,9 +24,11 @@ attrs==25.3.0
     # via aiohttp
     # via jsonschema
     # via referencing
+autopep8==2.3.2
 certifi==2025.1.31
     # via requests
 charset-normalizer==3.4.1
+    # via docformatter
     # via requests
 click==8.1.8
     # via transcorpus
@@ -35,6 +37,7 @@ coverage==7.8.0
     # via pytest-cov
 dill==0.3.9
     # via pylint
+docformatter==1.7.5
 docstring-gen==0.4.0
 fastjsonschema==2.21.1
     # via nbformat
@@ -81,6 +84,8 @@ pluggy==1.5.0
 propcache==0.3.1
     # via aiohttp
     # via yarl
+pycodestyle==2.13.0
+    # via autopep8
 pydantic==2.11.2
     # via transcorpus
 pydantic-core==2.33.1
@@ -94,6 +99,8 @@ pytest==8.3.5
     # via pytest-mock
 pytest-cov==6.1.0
 pytest-mock==3.14.0
+readchar==4.2.1
+    # via transcorpus
 referencing==0.36.2
     # via jsonschema
     # via jsonschema-specifications
@@ -105,6 +112,7 @@ rich==14.0.0
 rpds-py==0.24.0
     # via jsonschema
     # via referencing
+ruff==0.11.6
 shellingham==1.5.4
     # via typer
 snowballstemmer==2.2.0
@@ -131,6 +139,8 @@ typing-extensions==4.13.0
     # via typing-inspection
 typing-inspection==0.4.0
     # via pydantic
+untokenize==0.1.1
+    # via docformatter
 urllib3==2.3.0
     # via requests
     # via types-requests

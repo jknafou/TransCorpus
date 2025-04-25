@@ -1,9 +1,9 @@
 """
 TransCorpus Languages Module.
 
-This module defines the `M2M100_Languages` type, which is a Literal type representing
-the supported languages for the M2M100 multilingual translation model. The list of
-languages includes ISO 639-1 codes for various languages.
+This module defines the `M2M100_Languages` type, which is a Literal type
+representing the supported languages for the M2M100 multilingual translation
+model. The list of languages includes ISO 639-1 codes for various languages.
 
 Type Aliases:
     - M2M100_Languages: A Literal type containing all supported language codes.
@@ -17,7 +17,8 @@ Typical usage example:
         return False
 
     print(validate_language("en"))  # True
-    print(validate_language("xx"))  # Error: Argument "xx" is not valid for type "M2M100_Languages"
+    print(validate_language("xx"))  # Error: Argument "xx" is not valid for type
+    "M2M100_Languages"
 """
 
 from typing import Literal

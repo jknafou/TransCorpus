@@ -1,9 +1,9 @@
 """
 TransCorpus Command-Line Interface (CLI).
 
-This module provides the CLI entry point for the TransCorpus package. It organizes
-and exposes commands for downloading databases, corpora, and corpus IDs using the
-`retrieval` module.
+This module provides the CLI entry point for the TransCorpus package. It
+organizes and exposes commands for downloading databases, corpora, and corpus
+IDs using the `retrieval` module.
 
 Commands:
     - download_database: Download a database for a specific domain.
@@ -16,8 +16,9 @@ Typical usage example:
     $ transcorpus download_corpus_id bio --demo
 """
 
-from transcorpus import retrieval
 import click
+
+from transcorpus import preview, retrieval
 
 
 @click.group()
@@ -25,9 +26,9 @@ def cli():
     """
     Transcorpus CLI tool.
 
-    This is the main entry point for the TransCorpus command-line interface. It groups
-    all available commands (e.g., downloading databases, corpora, and IDs) into a single
-    CLI tool.
+    This is the main entry point for the TransCorpus command-line interface. It
+    groups all available commands (e.g., downloading databases, corpora, and
+    IDs) into a single CLI tool.
 
     Example:
         $ python cli.py --help
@@ -46,6 +47,9 @@ def cli():
 cli.add_command(retrieval.download_database)
 cli.add_command(retrieval.download_corpus)
 cli.add_command(retrieval.download_corpus_id)
+
+cli.add_command(preview.preview)
+# cli.add_command(preview.preview_corpus_id)
 
 if __name__ == "__main__":
     cli()

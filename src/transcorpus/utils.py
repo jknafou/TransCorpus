@@ -16,14 +16,16 @@ Typical usage example:
 
 from pathlib import Path
 
+from transcorpus.config import load_domains
+
 
 def create_transcorpus_dir() -> Path:
     """
     Create the `.TransCorpus` directory in the user's home directory if it does not exist.
 
-    This function checks whether the `.TransCorpus` directory exists in the user's home
-    directory. If it does not exist, it creates the directory and prints a message indicating
-    that it was created.
+    This function checks whether the `.TransCorpus` directory exists in the
+    user's home directory. If it does not exist, it creates the directory and
+    prints a message indicating that it was created.
 
     Returns:
         Path: The absolute path to the `.TransCorpus` directory.
@@ -38,3 +40,50 @@ def create_transcorpus_dir() -> Path:
         transcorpus_dir.mkdir(parents=True)
         print(f"Created directory: {transcorpus_dir}")
     return transcorpus_dir
+
+
+def get_domain_url(domain_name, data_type, file_suffix):
+    """
+    Get the URL and directory for a specific domain and data type.
+
+    This function retrieves the URL and directory for a specific domain and
+    data type (e.g., corpus, IDs) based on the provided domain name and file
+    suffix. It validates the input parameters and ensures that the target
+    directory exists.
+
+    Args:
+        domain_name (str): The name of the domain.
+        data_type (str): The type of data (e.g., "corpus", "id").
+        file_suffix (str): The file suffix to be used.
+
+    Returns:
+        tuple: A tuple containing the URL, the directory path, and the
+        domains dictionary.
+
+    Raises:
+        ValueError: If the domain name or data type is invalid, or if no URL is
+        found for the specified suffix.
+
+    Example:
+        >>> get_domain_url("bio", "corpus", "demo")
+        ('https://example.com/bio/demo.txt',
+        PosixPath('/home/user/.TransCorpus/bio/demo.txt'), {'bio': {...}})
+    """
+    domains_dict = load_domains(
+        Path(__file__).resolve().parent / "domains.json"
+    )
+    if domain_name not in domains_dict:
+        raise ValueError(f"Unknown domain name: {domain_name}")
+
+    data_entry = getattr(domains_dict[domain_name], data_type, None)
+    if not data_entry:
+        raise ValueError(
+            f"Invalid data type '{data_type}' for domain '{domain_name}'"
+        )
+    url = getattr(data_entry, file_suffix, None)
+    if not url:
+        raise ValueError(
+            f"No '{file_suffix}' found for {data_type} in {domain_name}"
+        )
+    transcorpus_dir = create_transcorpus_dir()
+    return url, transcorpus_dir, domains_dict

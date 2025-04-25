@@ -11,12 +11,14 @@ the following:
     a new directory if it already exists.
 
 Args:
-     tmp_path (Path): A pytest fixture providing a temporary directory for testing.
+     tmp_path (Path): A pytest fixture providing a temporary directory for
+     testing.
 """
 
-from transcorpus.utils import create_transcorpus_dir
-from unittest import mock
 from pathlib import Path
+from unittest import mock
+
+from transcorpus.utils import create_transcorpus_dir
 
 
 def test_create_transcorpus_dir(tmp_path):
@@ -24,14 +26,16 @@ def test_create_transcorpus_dir(tmp_path):
     Test the `create_transcorpus_dir` function to ensure it creates the expected
     directory in the user's home path.
 
-    This test uses a temporary path to mock the user's home directory and verifies:
+    This test uses a temporary path to mock the user's home directory and
+    verifies:
     - The directory is created at the expected location.
     - The created path exists and is a directory.
     - Subsequent calls to `create_transcorpus_dir` return the same path without
       creating a new directory.
 
     Args:
-        tmp_path (pathlib.Path): A temporary directory provided by pytest for testing.
+        tmp_path (pathlib.Path): A temporary directory provided by pytest for
+        testing.
     """
     with mock.patch.object(Path, "home") as mock_home:
         mock_home.return_value = tmp_path

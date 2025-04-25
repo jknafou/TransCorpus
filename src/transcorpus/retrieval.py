@@ -1,61 +1,60 @@
-"""
-TransCorpus Retrieval Module.
+"""TransCorpus Retrieval Module.
 
-This module provides functionality for downloading files and data from specific domains.
-It includes utilities to handle file downloads, domain configurations, and CLI commands
-for downloading different types of data (e.g., corpus, IDs, databases).
+This module provides functionality for downloading files and data from specific
+domains. It includes utilities to handle file downloads, domain configurations,
+and CLI commands for downloading different types of data (e.g., corpus, IDs,
+databases).
 
 Functions:
-    - download_file: Downloads a file from a given URL to a specified directory.
-    - download_data: Downloads corpus, IDs, or databases from a specific domain.
-    - download_corpus: CLI command to download a corpus.
-    - download_corpus_id: CLI command to download corpus IDs.
-    - download_database: CLI command to download a database.
+- download_file: Downloads a file from a given URL to a specified directory.
+- download_data: Downloads corpus, IDs, or databases from a specific domain.
+- download_corpus: CLI command to download a corpus.
+- download_corpus_id: CLI command to download corpus IDs.
+- download_database: CLI command to download a database.
 
 Classes:
-    - SuffixModel: A helper model to determine the file suffix based on a flag.
+- SuffixModel: A helper model to determine the file suffix based on a flag.
 
 Typical usage example:
-    $ python retrieval.py download_corpus bio --demo
+$ python retrieval.py download_corpus bio --demo
 """
 
-import requests
 from pathlib import Path
 from typing import Optional
+
+import click
+import requests
 from pydantic import BaseModel, HttpUrl
 from tqdm.auto import tqdm
 
-import click
-
-from transcorpus import create_transcorpus_dir
-from transcorpus.config import load_domains
-from transcorpus.models import FileSuffix, DataType
+from transcorpus.models import DataType, FileSuffix
+from transcorpus.utils import get_domain_url
 
 
 def download_file(url: HttpUrl, directory: Path) -> Optional[Path]:
-    """
-    Download a file from the specified URL to the given directory.
+    """Download a file from the specified URL to the given directory.
 
-    This function downloads a file from the provided URL and saves it in the specified
-    directory. If the file already exists, it skips the download. The function also handles
-    errors during the download process, such as network issues or user interruptions.
+    This function downloads a file from the provided URL and saves it in the
+    specified directory. If the file already exists, it skips the download.
+    The function also handles errors during the download process, such as
+    network issues or user interruptions.
 
-    Args:
-        url (HttpUrl): The URL of the file to be downloaded.
-        directory (Path): The directory where the file should be saved.
+        Args:
+            url (HttpUrl): The URL of the file to be downloaded.
+            directory (Path): The directory where the file should be saved.
 
-    Returns:
-        Optional[Path]: The path to the downloaded file if successful, or None if the
-        download failed.
+        Returns:
+            Optional[Path]: The path to the downloaded file if successful, or
+            None if the download failed.
 
-    Raises:
-        KeyboardInterrupt: If the user interrupts the download process.
+        Raises:
+            KeyboardInterrupt: If the user interrupts the download process.
 
-    Example:
-        >>> from pathlib import Path
-        >>> download_file("http://example.com/file", Path("/tmp"))
-        Downloaded: /tmp/file
-        PosixPath('/tmp/file')
+        Example:
+            >>> from pathlib import Path
+            >>> download_file("http://example.com/file", Path("/tmp"))
+            Downloaded: /tmp/file
+            PosixPath('/tmp/file')
     """
     directory.mkdir(parents=True, exist_ok=True)
     file_name = Path(str(url)).name
@@ -99,36 +98,29 @@ def download_data(
     domain_name: str,
     file_suffix: FileSuffix,
 ) -> None:
-    """
-    Download data (corpus, IDs, or database) for a specific domain.
+    """Download data (corpus, IDs, or database) for a specific domain.
 
-    This function retrieves data from a specified domain and downloads it based on the
-    provided data type and file suffix. It validates input parameters and ensures that
-    the target directory exists.
+    This function retrieves data from a specified domain and downloads it based
+    on the provided data type and file suffix. It validates input parameters
+    and ensures that the target directory exists.
 
     Args:
-        data_type (DataType): The type of data to be downloaded (e.g., "corpus").
+        data_type (DataType): The type of data to be downloaded
+        (e.g., "corpus").
         domain_name (str): The name of the domain from which to retrieve data.
-        file_suffix (FileSuffix): The suffix of the file to be downloaded (e.g., "file" or "demo").
+        file_suffix (FileSuffix): The suffix of the file to be downloaded
+        (e.g., "file" or "demo").
 
     Raises:
-        ValueError: If the domain name or data type is invalid, or if no URL is found for
-        the specified suffix.
+        ValueError: If the domain name or data type is invalid, or if no URL is
+        found for the specified suffix.
 
     Example:
         >>> download_data("corpus", "bio", "file")
     """
-    domains_dict = load_domains(Path(__file__).resolve().parent / "domains.json")
-    if domain_name not in domains_dict:
-        raise ValueError(f"Unknown domain name: {domain_name}")
-
-    data_entry = getattr(domains_dict[domain_name], data_type, None)
-    if not data_entry:
-        raise ValueError(f"Invalid data type '{data_type}' for domain '{domain_name}'")
-    url = getattr(data_entry, file_suffix, None)
-    if not url:
-        raise ValueError(f"No '{file_suffix}' found for {data_type} in {domain_name}")
-    transcorpus_dir = create_transcorpus_dir()
+    url, transcorpus_dir, domains_dict = get_domain_url(
+        domain_name=domain_name, data_type=data_type, file_suffix=file_suffix
+    )
     download_file(
         url,
         transcorpus_dir / domain_name / domains_dict[domain_name].language,
@@ -136,8 +128,7 @@ def download_data(
 
 
 class SuffixModel(BaseModel):
-    """
-    A helper model to determine the appropriate file suffix based on a flag.
+    """A helper model to determine the appropriate file suffix based on a flag.
 
     Attributes:
         flag (bool): A boolean flag indicating whether to use "demo" mode.
@@ -154,8 +145,7 @@ class SuffixModel(BaseModel):
     flag: bool
 
     def get_suffix(self) -> FileSuffix:
-        """
-        Get the appropriate file suffix based on the flag.
+        """Get the appropriate file suffix based on the flag.
 
         Returns:
             FileSuffix: "demo" if the flag is True; otherwise "file".
@@ -172,15 +162,12 @@ class SuffixModel(BaseModel):
 @click.argument("corpus_name")
 @click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
 def download_corpus(corpus_name: str, demo: bool) -> None:
-    """
-    CLI command to download a corpus for a specific domain.
+    """CLI command to download a corpus for a specific domain.
 
-    Args:
-        corpus_name (str): The name of the corpus to be downloaded.
-        demo (bool): Whether to run in demo mode.
+    Args:     corpus_name (str): The name of the corpus to be
+    downloaded. demo (bool): Whether to run in demo mode.
 
-    Example:
-        $ python retrieval.py download_corpus bio --demo
+    Example:     $ python retrieval.py download_corpus bio --demo
     """
     file_suffix = SuffixModel(flag=demo)
     download_data("corpus", corpus_name, file_suffix.get_suffix())
@@ -190,15 +177,12 @@ def download_corpus(corpus_name: str, demo: bool) -> None:
 @click.argument("id_name")
 @click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
 def download_corpus_id(id_name: str, demo: bool):
-    """
-    CLI command to download corpus IDs for a specific domain.
+    """CLI command to download corpus IDs for a specific domain.
 
-    Args:
-        id_name (str): The name of the ID set to be downloaded.
-        demo (bool): Whether to run in demo mode.
+    Args:     id_name (str): The name of the ID set to be downloaded.
+    demo (bool): Whether to run in demo mode.
 
-    Example:
-        $ python retrieval.py download_corpus_id bio --demo
+    Example:     $ python retrieval.py download_corpus_id bio --demo
     """
     file_suffix = SuffixModel(flag=demo)
     download_data("id", id_name, file_suffix.get_suffix())
@@ -208,15 +192,12 @@ def download_corpus_id(id_name: str, demo: bool):
 @click.argument("database_name")
 @click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
 def download_database(database_name: str, demo: bool):
-    """
-    CLI command to download a database for a specific domain.
+    """CLI command to download a database for a specific domain.
 
-    Args:
-        database_name (str): The name of the database to be downloaded.
-        demo (bool): Whether to run in demo mode.
+    Args:     database_name (str): The name of the database to be
+    downloaded. demo (bool): Whether to run in demo mode.
 
-    Example:
-        $ python retrieval.py download_database bio --demo
+    Example:     $ python retrieval.py download_database bio --demo
     """
     file_suffix = SuffixModel(flag=demo)
     download_data("database", database_name, file_suffix.get_suffix())

@@ -42,23 +42,20 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from pydantic import HttpUrl
 import pytest
 import requests
-
-
 from click.testing import CliRunner
+from pydantic import HttpUrl
 
+from transcorpus.config import load_domains
+from transcorpus.models import DomainData
 from transcorpus.retrieval import (
     download_corpus,
     download_corpus_id,
-    download_database,
     download_data,
+    download_database,
     download_file,
 )
-from transcorpus.config import load_domains
-from transcorpus.models import DomainData
-from pytest_mock import MockerFixture
 
 
 @pytest.fixture(name="_domains_fixture")
@@ -81,30 +78,36 @@ def domains_fixture() -> dict[str, DomainData]:
 
 @pytest.fixture(name="_mock_download_setup")
 def mock_download_setup(
-    _domains_fixture: dict[str, DomainData], data_type, tmp_path: Path, file_name
+    _domains_fixture: dict[str, DomainData],
+    data_type,
+    tmp_path: Path,
+    file_name,
 ):
     """
     Fixture to mock the download setup for testing purposes.
 
-    This fixture patches the `requests.get` method to simulate a download process
-    without making actual HTTP requests. It provides a mocked response object,
-    a mocked `requests.get` function, a data entry from the `_domains_fixture`,
-    and a temporary file path for testing.
+    This fixture patches the `requests.get` method to simulate a download
+    process without making actual HTTP requests. It provides a mocked response
+    object, a mocked `requests.get` function, a data entry from the
+    `_domains_fixture`, and a temporary file path for testing.
 
     Args:
-        _domains_fixture (dict[str, DomainData]): A dictionary containing domain data
-            used for testing. The specific data entry is determined by the `data_type`.
-        data_type (str): The type of data to retrieve from the `_domains_fixture`.
-        tmp_path (Path): A temporary directory path provided by pytest for storing
-            temporary files during the test.
+        _domains_fixture (dict[str, DomainData]): A dictionary containing domain
+        data used for testing. The specific data entry is determined by the
+        `data_type`.
+        data_type (str): The type of data to retrieve from the
+        `_domains_fixture`.
+        tmp_path (Path): A temporary directory path provided by pytest for
+        storing temporary files during the test.
         file_name (str): The name of the file to be used in the temporary path.
 
     Yields:
         tuple: A tuple containing:
-            - mock_response (Mock): A mocked response object with predefined headers
-            and behavior.
+            - mock_response (Mock): A mocked response object with predefined
+            headers and behavior.
             - mock_get (Mock): A mocked `requests.get` function.
-            - data_entry: The specific data entry from `_domains_fixture` based on `data_type`.
+            - data_entry: The specific data entry from `_domains_fixture` based
+            on `data_type`.
             - file_path (Path): The full path to the temporary file.
     """
     with mock.patch("requests.get") as mock_get:
@@ -134,19 +137,19 @@ def test_download_file_already_exists(
     file_name: str,
 ):
     """
-    Test that the `download_file` function correctly handles the case where the file
-    already exists in the target directory.
+    Test that the `download_file` function correctly handles the case where the
+    file already exists in the target directory.
 
     This test uses the `COMMON_PARAMS` parameterized values to check multiple
-    combinations of `data_type` and `file_name`. It ensures that the function does
-    not attempt to re-download the file and instead logs a message indicating that
-    the file is already downloaded.
+    combinations of `data_type` and `file_name`. It ensures that the function
+    does not attempt to re-download the file and instead logs a message
+    indicating that the file is already downloaded.
 
     Args:
-        _domains_fixture (dict[str, DomainData]): A fixture providing domain-specific
-            data for testing.
-        tmp_path (Path): A temporary directory path provided by pytest for testing
-            file operations.
+        _domains_fixture (dict[str, DomainData]): A fixture providing
+        domain-specific data for testing.
+        tmp_path (Path): A temporary directory path provided by pytest for
+        testing file operations.
         data_type (str): The type of data being tested (e.g., "text", "image").
         file_name (str): The name of the file to be checked.
 
@@ -174,25 +177,29 @@ def test_download_file_already_exists(
 
 @pytest.mark.parametrize(("data_type", "file_name"), COMMON_PARAMS)
 def test_download_file_successful(
-    _mock_download_setup: tuple[mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any],
+    _mock_download_setup: tuple[
+        mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any
+    ],
     tmp_path: Path,
 ):
     """
     Test the successful download of a file.
 
-    This test verifies that the `download_file` function correctly downloads a file
-    and performs the expected operations, such as printing a success message and
-    making the appropriate HTTP GET request.
+    This test verifies that the `download_file` function correctly downloads a
+    file and performs the expected operations, such as printing a success
+    message and making the appropriate HTTP GET request.
 
     Args:
-        _mock_download_setup (tuple[mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any]):
+        _mock_download_setup
+        (tuple[mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any]):
             A tuple containing mocked objects and data for setting up the test:
             - mock_response: A mocked HTTP response object.
-            - mock_get: A mocked HTTP GET function (synchronous or asynchronous).
+            - mock_get: A mocked HTTP GET function
+            (synchronous or asynchronous).
             - data_entry: An object representing the file to be downloaded.
             - file_path: The expected file path where the file will be saved.
-        tmp_path (Path): A temporary directory path provided by pytest for storing
-            test files.
+        tmp_path (Path): A temporary directory path provided by pytest for
+        storing test files.
 
     Asserts:
         - The `print` function is called with the expected success message.
@@ -205,26 +212,36 @@ def test_download_file_successful(
     with mock.patch("builtins.print") as mock_print:
         download_file(data_entry.file, tmp_path)
         mock_print.assert_called_with(f"Downloaded: {file_path}")
-        mock_get.assert_called_once_with(str(data_entry.file), stream=True, timeout=10)
+        mock_get.assert_called_once_with(
+            str(data_entry.file), stream=True, timeout=10
+        )
 
 
 @pytest.mark.parametrize(("data_type", "file_name"), COMMON_PARAMS)
 def test_download_file_deletes_partial_file_on_error(
-    _mock_download_setup: tuple[mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any],
+    _mock_download_setup: tuple[
+        mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any
+    ],
     tmp_path: Path,
 ):
     """
-    Test that `download_file` deletes the partially downloaded file when an error occurs during the download process.
+    Test that `download_file` deletes the partially downloaded file when an
+    error occurs during the download process.
 
-    This test uses parameterized inputs for different data types and file names, and mocks the download setup to simulate
-    a scenario where an exception is raised during the file download. It ensures that the function handles the error
-    gracefully by returning `None` and removing any partially downloaded file.
+    This test uses parameterized inputs for different data types and file names,
+    and mocks the download setup to simulate a scenario where an exception is
+    raised during the file download. It ensures that the function handles the
+    error gracefully by returning `None` and removing any partially downloaded
+    file.
 
     Args:
-        _mock_download_setup (tuple): A tuple containing mocked objects and data for the download setup, including:
-            - mock_response: A mocked response object with a side effect to simulate an error during `iter_content`.
+        _mock_download_setup (tuple): A tuple containing mocked objects and
+        data for the download setup, including:
+            - mock_response: A mocked response object with a side effect to
+            simulate an error during `iter_content`.
             - Other elements used for testing purposes.
-        tmp_path (Path): A temporary directory path provided by pytest for storing test files.
+        tmp_path (Path): A temporary directory path provided by pytest for
+        storing test files.
 
     Asserts:
         - The result of `download_file` is `None` when an error occurs.
@@ -245,10 +262,11 @@ def test_download_file_deletes_partial_file_on_error(
 
 @pytest.mark.parametrize(("data_type", "file_name"), COMMON_PARAMS)
 def test_download_file_deletes_partial_file_on_keyboard_interrupt(
-    _mock_download_setup: tuple[mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any],
+    _mock_download_setup: tuple[
+        mock.Mock, mock.MagicMock | mock.AsyncMock, Any, Any
+    ],
     _domains_fixture: dict[str, DomainData],
     tmp_path: Path,
-    mocker: MockerFixture,
 ):
     """
     Test that the `download_file` function deletes a partially downloaded file
@@ -302,37 +320,46 @@ def test_download_data(
     data_type, domain_name, file_suffix, expected_error, _domains_fixture
 ):
     """
-    Test the `download_data` function to ensure it behaves correctly under various scenarios.
+    Test the `download_data` function to ensure it behaves correctly under
+    various scenarios.
 
     Args:
         data_type (str): The type of data to be downloaded.
-        domain_name (str): The name of the domain for which data is being downloaded.
+        domain_name (str): The name of the domain for which data is being
+        downloaded.
         file_suffix (str): The suffix of the file to be downloaded.
-        expected_error (str or None): The expected error message if an exception is raised.
-                                      If None, no exception is expected.
-        _domains_fixture (dict): A fixture providing mock domain data for testing.
+        expected_error (str or None): The expected error message if an
+        exception is raised. If None, no exception is expected.
+        _domains_fixture (dict): A fixture providing mock domain data for
+        testing.
 
     Mocks:
-        - `transcorpus.retrieval.create_transcorpus_dir`: Mocked to simulate directory creation.
-        - `transcorpus.retrieval.download_file`: Mocked to simulate file download.
-        - `transcorpus.retrieval.load_domains`: Mocked to simulate loading domain data.
+        - `transcorpus.retrieval.create_transcorpus_dir`: Mocked to simulate
+        directory creation.
+        - `transcorpus.retrieval.download_file`: Mocked to simulate file
+        download.
+        - `transcorpus.retrieval.load_domains`: Mocked to simulate loading
+        domain data.
 
     Test Cases:
-        - If `expected_error` is provided, the function should raise a `ValueError` with
-          the expected error message.
+        - If `expected_error` is provided, the function should raise a
+        `ValueError` with the expected error message.
         - If no error is expected, the function should:
             - Call `create_transcorpus_dir` once to create the directory.
             - Call `download_file` with the correct URL and file path.
 
     Assertions:
-        - Verifies that the expected exception is raised when `expected_error` is provided.
-        - Verifies that the mocked functions are called with the correct arguments when
-          no error is expected.
+        - Verifies that the expected exception is raised when `expected_error`
+        is provided.
+        - Verifies that the mocked functions are called with the correct
+        arguments when no error is expected.
     """
     with (
-        mock.patch("transcorpus.retrieval.create_transcorpus_dir") as mock_create_dir,
+        mock.patch(
+            "transcorpus.utils.create_transcorpus_dir"
+        ) as mock_create_dir,
         mock.patch("transcorpus.retrieval.download_file") as mock_download_file,
-        mock.patch("transcorpus.retrieval.load_domains") as mock_load_domains,
+        mock.patch("transcorpus.utils.load_domains") as mock_load_domains,
     ):
         mock_create_dir.return_value = Path("/mock/transcorpus")
         mock_load_domains.return_value = _domains_fixture
@@ -363,7 +390,8 @@ def mock_dependencies(_domains_fixture):
     - `transcorpus.retrieval.load_domains`
 
     The mocked functions are configured as follows:
-    - `create_transcorpus_dir`: Returns a mocked `Path` object pointing to "/mock/transcorpus".
+    - `create_transcorpus_dir`: Returns a mocked `Path` object pointing to
+    "/mock/transcorpus".
     - `load_domains`: Returns the `_domains_fixture` provided as an argument.
 
     Yields:
@@ -373,9 +401,11 @@ def mock_dependencies(_domains_fixture):
             - "mock_load_domains": Mock for `load_domains`.
     """
     with (
-        mock.patch("transcorpus.retrieval.create_transcorpus_dir") as mock_create_dir,
+        mock.patch(
+            "transcorpus.utils.create_transcorpus_dir"
+        ) as mock_create_dir,
         mock.patch("transcorpus.retrieval.download_file") as mock_download_file,
-        mock.patch("transcorpus.retrieval.load_domains") as mock_load_domains,
+        mock.patch("transcorpus.utils.load_domains") as mock_load_domains,
     ):
         mock_create_dir.return_value = Path("/mock/transcorpus")
         mock_load_domains.return_value = _domains_fixture
@@ -391,8 +421,9 @@ def test_download_database(_mock_dependencies):
     """
     Test the `download_database` function using a CLI runner.
 
-    This test verifies that the `download_database` command executes successfully
-    and that the `mock_download_file` dependency is called with the correct arguments.
+    This test verifies that the `download_database` command executes
+    successfully and that the `mock_download_file` dependency is called with
+    the correct arguments.
 
     Args:
         _mock_dependencies (dict): A dictionary containing mocked dependencies,
@@ -400,8 +431,8 @@ def test_download_database(_mock_dependencies):
 
     Assertions:
         - The command's exit code is 0, indicating successful execution.
-        - The `mock_download_file` function is called exactly once with the expected
-          URL and file path.
+        - The `mock_download_file` function is called exactly once with the
+        expected URL and file path.
     """
     runner = CliRunner()
     result = runner.invoke(download_database, ["test"])
@@ -415,19 +446,24 @@ def test_download_database(_mock_dependencies):
 
 def test_download_corpus(_mock_dependencies):
     """
-    Test the `download_corpus` function to ensure it correctly downloads a corpus file.
+    Test the `download_corpus` function to ensure it correctly downloads a
+    corpus file.
 
-    This test uses a mocked CLI runner to invoke the `download_corpus` command with a test argument.
-    It verifies that the command exits successfully and that the `mock_download_file` dependency
-    is called with the expected URL and file path.
+    This test uses a mocked CLI runner to invoke the `download_corpus` command
+    with a test argument. It verifies that the command exits successfully and
+    that the `mock_download_file` dependency is called with the expected URL and
+    file path.
 
     Args:
-        _mock_dependencies (dict): A dictionary of mocked dependencies, including:
-            - "mock_download_file": A mock object for the file download function.
+        _mock_dependencies (dict): A dictionary of mocked dependencies,
+        including:
+            - "mock_download_file": A mock object for the file download
+            function.
 
     Assertions:
         - The command's exit code is 0, indicating success.
-        - The `mock_download_file` is called exactly once with the expected URL and file path.
+        - The `mock_download_file` is called exactly once with the expected URL
+        and file path.
     """
     runner = CliRunner()
     result = runner.invoke(download_corpus, ["test"])
@@ -441,16 +477,21 @@ def test_download_corpus(_mock_dependencies):
 
 def test_download_corpus_id(_mock_dependencies):
     """
-    Test the `download_corpus_id` function to ensure it correctly downloads a corpus
-    file and saves it to the expected location.
+    Test the `download_corpus_id` function to ensure it correctly downloads a
+    corpus file and saves it to the expected location.
 
-    This test uses a mocked dependency to simulate the download process and verifies:
-    - The command-line interface (CLI) invocation completes successfully with an exit code of 0.
-    - The `mock_download_file` method is called exactly once with the expected URL and file path.
+    This test uses a mocked dependency to simulate the download process and
+    verifies:
+    - The command-line interface (CLI) invocation completes successfully with
+    an exit code of 0.
+    - The `mock_download_file` method is called exactly once with the expected
+    URL and file path.
 
     Args:
-        _mock_dependencies (dict): A dictionary of mocked dependencies, including:
-            - "mock_download_file": A mock object for the file download function.
+        _mock_dependencies (dict): A dictionary of mocked dependencies,
+        including:
+            - "mock_download_file": A mock object for the file download
+            function.
     """
     runner = CliRunner()
     result = runner.invoke(download_corpus_id, ["test"])
