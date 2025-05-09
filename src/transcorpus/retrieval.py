@@ -9,7 +9,6 @@ Functions:
 - download_file: Downloads a file from a given URL to a specified directory.
 - download_data: Downloads corpus, IDs, or databases from a specific domain.
 - download_corpus: CLI command to download a corpus.
-- download_corpus_id: CLI command to download corpus IDs.
 - download_database: CLI command to download a database.
 
 Classes:
@@ -171,21 +170,7 @@ def download_corpus(corpus_name: str, demo: bool) -> None:
     """
     file_suffix = SuffixModel(flag=demo)
     download_data("corpus", corpus_name, file_suffix.get_suffix())
-
-
-@click.command()
-@click.argument("id_name")
-@click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
-def download_corpus_id(id_name: str, demo: bool):
-    """CLI command to download corpus IDs for a specific domain.
-
-    Args:     id_name (str): The name of the ID set to be downloaded.
-    demo (bool): Whether to run in demo mode.
-
-    Example:     $ python retrieval.py download_corpus_id bio --demo
-    """
-    file_suffix = SuffixModel(flag=demo)
-    download_data("id", id_name, file_suffix.get_suffix())
+    download_data("id", corpus_name, file_suffix.get_suffix())
 
 
 @click.command()
