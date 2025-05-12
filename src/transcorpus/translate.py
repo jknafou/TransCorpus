@@ -34,6 +34,7 @@ from transcorpus.languages import M2M100_Languages
 from transcorpus.preprocess import spm_encode
 from transcorpus.retrieval import SuffixModel, download_file
 import sys
+from pydocstyle.wordlists import stem
 from transcorpus.utils import (
     abbreviation,
     get_domain_url,
@@ -149,13 +150,12 @@ def generate_translation(
         "--results-path",
         str(results_path),
         "--num-workers",
-        "0",
-        "--no-progress-bar",
+        "8",
         "--fp16",
-        "--batch-size",
+        "--required-batch-size-multiple",
         "1",
-        # "--max-tokens",
-        # "4096",
+        "--max-tokens",
+        "19456",  # for A100 (40GB)
         "--max-len-a",
         "1.5",
         "--remove-bpe",
@@ -177,71 +177,60 @@ def generate_translation(
 
 
 def retrieve_translation(
-    generated_file: Path,
+    dest_dir: Path,
     documents_sentences_ids: list[str],
 ):
+    generated_translation_path = dest_dir.parent / "generate-test.txt"
     translated_pattern = re.compile("^D-[0-9]+")
-    en_pattern = re.compile("^S-[0-9]+")
-
     translation_dict = {}
-    with open(generated_file, encoding="utf-8") as f:
+    with open(generated_translation_path, encoding="utf-8") as f:
         for line in f:
             if translated_pattern.search(line):
-                id, score, sentence = line.split("\t")
-                id = int(id.split("-")[-1])
-                if id not in translation_dict:
-                    translation_dict[id] = {}
-                translation_dict[id]["translated"] = sentence.rstrip()
+                i, score, sentence = line.split("\t")
+                translation_dict[int(i.split("-")[-1])] = sentence.rstrip()
 
-            elif en_pattern.search(line):
-                id, sentence = line.split("\t")
-                id = int(id.split("-")[-1])
-                if id not in translation_dict:
-                    translation_dict[id] = {}
-                translation_dict[id]["en"] = sentence.rstrip()[7:]
-
-    all_ids = sorted(list(translation_dict.keys()))
-    # with open(PMID_INDEX_PATH) as f:
-    #     documents_sentences_ids = f.read()
-    # documents_sentences_ids = [line.rstrip().split("\t") for line in open(PMID_INDEX_PATH)]
-
-    print("documents_sentences_ids", documents_sentences_ids)
-    print("length of documents_sentences_ids", len(documents_sentences_ids))
-    print("translation_dict", translation_dict)
-    print("length of translation_dict", len(translation_dict))
-    assert len(all_ids) == len(documents_sentences_ids), (
-        "The number of generated translations does not match the number of sentences in the input file. "
-        # "This can be due to a problem with the translation model not fitting your machine."
+    assert len(translation_dict) == len(documents_sentences_ids), (
+        "The number of generated translations does not match the number of sentences in the input file."
     )
-    # current_pmid = documents_sentences_ids[0][0]
-    # current_section = "title"
-    # text_to_write = current_pmid + "\t"
-    # for [pmid, section, has_cut_at_max], translated_sentence_id in tqdm(
-    #     zip(documents_sentences_ids, all_ids), total=len(pmid_index)
-    # ):
-    #     if pmid != current_pmid:
-    #         text_to_write += "\n" + pmid + "\t"
-    #     elif current_section != section:
-    #         text_to_write += "\t"
-    #     else:
-    #         text_to_write += " "
-    #
-    #     text_to_write += translation_dict[translated_sentence_id]["fr"]
-    #     current_section = section
-    #     current_pmid = pmid
-    #
-    # assert len(text_to_write.rstrip().split("\n")) == sum(
-    #     1 for _ in open(PMID_PATH)
-    # )
-    # with open(TRANSLATION_PATH, encoding="utf-8", mode="w") as f:
-    #     f.write(text_to_write.rstrip())
-    #
-    # logging.warning(
-    #     "translation finsished for run number "
-    #     + index_run
-    #     + " and GPU number "
-    #     + index_gpu
-    # )
+    current_id = None
+    with open(dest_dir.as_posix() + ".txt", encoding="utf-8", mode="w") as f:
+        for i, doc_id in enumerate(documents_sentences_ids):
+            if current_id is not None and doc_id != current_id:
+                f.write("\n")  # Add newline AFTER the previous document ends
+            f.write(
+                translation_dict[i].strip() + " "
+            )  # Trim existing newlines in sentences
+            current_id = doc_id
+        f.write("\n")  # Add newline AFTER the last document ends
+
+
+def merge_splits(
+    dest_dir: Path,
+    num_splits: int,
+):
+    expected_files = [
+        Path(f"{dest_dir.parent / dest_dir.stem}.{i}_{num_splits}.txt")
+        for i in range(1, num_splits + 1)
+    ]
+    if not all(f.exists() for f in expected_files):
+        click.secho(
+            f"Not all expected files exist in {dest_dir}."
+            " Will merge automatically the corpus once all splits are done.",
+            fg="yellow",
+        )
+        return
+
+    with open(
+        dest_dir.parent / (dest_dir.stem + ".txt"), "w", encoding="utf-8"
+    ) as outfile:
+        for split_path in expected_files:
+            with open(
+                split_path,
+                "r",
+                encoding="utf-8",
+            ) as infile:
+                for line in infile:
+                    outfile.write(line)
 
 
 @click.command()
@@ -402,12 +391,12 @@ def translate(
         )
 
     file_new_name = f"{file_stem}.{split_index}_{num_splits}"
-    corpus_path = (
+    split_corpus_path = (
         transcorpus_dir / corpus_name / original_language / file_new_name
     )
     dest_dir = transcorpus_dir / corpus_name / target / file_new_name
     preprocess_data(
-        corpus_path=corpus_path,
+        corpus_path=split_corpus_path,
         source_lang=original_language,
         target_lang=target,
         model_dict_path=model_tokenizer_dictionary_path,
@@ -460,6 +449,11 @@ def translate(
     )
 
     retrieve_translation(
-        dest_dir.parent / "generate-test.txt",
+        dest_dir,
         documents_sentences_ids,
+    )
+
+    merge_splits(
+        dest_dir=dest_dir,
+        num_splits=num_splits,
     )
