@@ -18,7 +18,7 @@ Typical usage example:
 
 import click
 
-from transcorpus import preview, retrieval
+from transcorpus import preview, retrieval, translate
 
 
 @click.group()
@@ -48,6 +48,8 @@ cli.add_command(retrieval.download_database)
 cli.add_command(retrieval.download_corpus)
 
 cli.add_command(preview.preview)
+
+cli.add_command(translate.translate)
 
 if __name__ == "__main__":
     cli()

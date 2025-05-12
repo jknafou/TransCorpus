@@ -30,7 +30,9 @@ from transcorpus.models import DataType, FileSuffix
 from transcorpus.utils import get_domain_url
 
 
-def download_file(url: HttpUrl, directory: Path) -> Optional[Path]:
+def download_file(
+    url: HttpUrl, directory: Path, v: bool = True
+) -> Optional[Path]:
     """Download a file from the specified URL to the given directory.
 
     This function downloads a file from the provided URL and saves it in the
@@ -60,7 +62,8 @@ def download_file(url: HttpUrl, directory: Path) -> Optional[Path]:
     file_path = directory / file_name
 
     if file_path.exists():
-        print(f"File already downloaded: {file_name}")
+        if v:
+            print(f"File already downloaded: {file_name}")
         return file_path
 
     try:

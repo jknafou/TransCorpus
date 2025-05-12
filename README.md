@@ -1,54 +1,28 @@
-# Notes for README:
+# TODO
+- [ ] create a pypi package
+  - [ ] create pypi login and token
 
-https://ftp.ncbi.nlm.nih.gov/pubmed/
+- [ ] preview-test:
+ - [ ] write test function, with a few thinking in :
+  - [ ] translation side by side with text of different sizes?
+  - [ ] what if no ids are given?
+  - [ ] shouldn't we give two types of ids, let's say I want to display a pmid, I don't want to look for it...ids, let's say I want to display a pmid, I don't want to look for it...
 
-## Corpus Retrieval
+- [ ] translate:
+ - [x] create a function that would split huge corpus consistantly (fast)
+ - [ ] preprocessing function
+  - [x] split to sentences
+  - [x] tokenize and write to file
+  - [x] from file to binary
+ - [ ] translation cpu
+  -[ ] write function that calls generate in python
+  -[ ] mute fairseq verbose
+ - [ ] translation gpu
+ - [ ] postprocessing function
+  - [ ] merge function if last split is translated
+  - [ ] delete everything that is not needed
+- [ ] run rye ci
 
-Data can be retrieve from the following ftp server:
+- [ ] improve demo size to 10K
+- [ ] Test on real data
 
-https://ftp.ncbi.nlm.nih.gov/pubmed/
-
-The version used for TransBERT training are stored in the following S3 bucket:
-
-```bash
-wget -P ../data/bibmed https://transcorpus.s3.text-analytics.ch/bibmed.tar.gz
-tar -xzvf ../data/bibmed/bibmed.tar.gz
-```
-
-## Corpus Preprocessing
-
-````bash
-
-## Corpus Translation
-
-```bash
-wget https://transcorpus.s3.text-analytics.ch/PMID.txt
-wget https://transcorpus.s3.text-analytics.ch/title_abstract_en.txt
-````
-
-## Model Download
-
-Commands to be add in CLI
-
-TODO:
-
-```bash
-# transcorpus upload law
-
-transcorpus download-database bio -d
-transcorpus download-corpus bio -d
-transcorpus download-corpus-id bio -d
-
-transcorpus preview bio -d --count 1 --start-at 0 --language en
-
-transcorpus process-database bio # just to show and give people the possibility to modify a few steps...
-transcorpus process-corpus bio -d
-# database would have one step more so if people want to tweak it
-
-transcorpus split-corpus bio --n_split 16
-
-transcorpus translate bio --target fr --split 1
-
-transcorpus merge-translated-corpus bio
-
-```

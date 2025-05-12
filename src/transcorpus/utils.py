@@ -16,7 +16,7 @@ Typical usage example:
 
 from pathlib import Path
 
-from transcorpus.config import load_domains
+from transcorpus.config import load_domains, load_translation_models
 
 
 def create_transcorpus_dir() -> Path:
@@ -42,7 +42,7 @@ def create_transcorpus_dir() -> Path:
     return transcorpus_dir
 
 
-def get_domain_url(domain_name, data_type, file_suffix):
+def get_domain_url(domain_name: str, data_type: str, file_suffix: str) -> tuple:
     """
     Get the URL and directory for a specific domain and data type.
 
@@ -87,3 +87,87 @@ def get_domain_url(domain_name, data_type, file_suffix):
         )
     transcorpus_dir = create_transcorpus_dir()
     return url, transcorpus_dir, domains_dict
+
+
+def get_model_translation_url():
+    return load_translation_models(
+        Path(__file__).resolve().parent / "translation_urls.json"
+    )
+
+
+abbreviation = [
+    "a",
+    "å",
+    "Ǻ",
+    "Å",
+    "b",
+    "c",
+    "d",
+    "e",
+    "ɛ",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "Ö",
+    "Ø",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "µm",
+    "abs",
+    "al",
+    "approx",
+    "bp",
+    "ca",
+    "cap",
+    "cf",
+    "co",
+    "d.p.c",
+    "dr",
+    "e.g",
+    "et",
+    "etc",
+    "er",
+    "eq",
+    "fig",
+    "figs",
+    "h",
+    "i.e",
+    "it",
+    "inc",
+    "min",
+    "ml",
+    "mm",
+    "mol",
+    "ms",
+    "no",
+    "nt",
+    "ref",
+    "r.p.m",
+    "sci",
+    "s.d",
+    "sd",
+    "sec",
+    "s.e.m",
+    "sp",
+    "ssp",
+    "st",
+    "supp",
+    "vs",
+    "wt",
+]

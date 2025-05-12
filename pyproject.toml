@@ -7,15 +7,22 @@ authors = [
 ]
 license = "MIT"
 dependencies = [
+    "pip<24.1",
     "click>=8.1.8",
     "requests>=2.32.3",
     "pydantic>=2.11.2",
     "tqdm>=4.67.1",
     "readchar>=4.2.1",
     "debugpy>=1.8.14",
+    "nltk<3.8.2",
+    "sentencepiece>=0.2.0",
+    "fairseq @ git+https://github.com/facebookresearch/fairseq@ecbf110e1eb43861214b05fa001eff584954f65a",
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+    "torchaudio>=2.7.0",
 ]
 readme = "README.md"
-requires-python = ">= 3.9"
+requires-python = ">=3.7, <3.11"
 
 [build-system]
 requires = ["hatchling"]

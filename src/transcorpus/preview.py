@@ -94,7 +94,6 @@ def preview_txt(
             language=("en", "fr"),
         )
     """
-    # Main logic starts here
     corpus_url, transcorpus_dir, domains_dict = get_domain_url(
         domain_name=domain_name, data_type="corpus", file_suffix=file_suffix
     )
@@ -106,10 +105,7 @@ def preview_txt(
     original_language = domain.language
     corpus_file_name = Path(str(corpus_url)).name
 
-    # Language processing
-    language_list = sorted(
-        set(language), key=lambda x: x != original_language
-    )  # Original language first
+    language_list = sorted(set(language), key=lambda x: x != original_language)
 
     if not corpus_id_url:
         preview_ids = [str(i) for i in range(start_at, start_at + count)]

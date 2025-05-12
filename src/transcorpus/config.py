@@ -64,3 +64,14 @@ def load_domains(json_path: Path) -> dict[str, DomainData]:
 
     except FileNotFoundError as e:
         raise ValueError(f"Configuration file not found at {json_path}") from e
+
+
+def load_translation_models(json_path: Path) -> dict[str, str]:
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+    except FileNotFoundError as e:
+        raise ValueError(f"Configuration file not found at {json_path}") from e
+
+    return data

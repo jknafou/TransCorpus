@@ -18,34 +18,57 @@ aiosignal==1.3.2
     # via aiohttp
 annotated-types==0.7.0
     # via pydantic
+antlr4-python3-runtime==4.8
+    # via hydra-core
 astroid==3.3.9
     # via pylint
+async-timeout==5.0.1
+    # via aiohttp
 attrs==25.3.0
     # via aiohttp
     # via jsonschema
     # via referencing
 autopep8==2.3.2
+bitarray==3.4.0
+    # via fairseq
 certifi==2025.1.31
     # via requests
+cffi==1.17.1
+    # via fairseq
 charset-normalizer==3.4.1
     # via docformatter
     # via requests
 click==8.1.8
+    # via nltk
     # via transcorpus
     # via typer
+colorama==0.4.6
+    # via sacrebleu
 coverage==7.8.0
     # via pytest-cov
+cython==3.1.0
+    # via fairseq
 debugpy==1.8.14
     # via transcorpus
 dill==0.3.9
     # via pylint
 docformatter==1.7.5
 docstring-gen==0.4.0
+exceptiongroup==1.2.2
+    # via pytest
+fairseq @ git+https://github.com/facebookresearch/fairseq@ecbf110e1eb43861214b05fa001eff584954f65a
+    # via transcorpus
 fastjsonschema==2.21.1
     # via nbformat
+filelock==3.18.0
+    # via torch
 frozenlist==1.5.0
     # via aiohttp
     # via aiosignal
+fsspec==2025.3.2
+    # via torch
+hydra-core==1.0.7
+    # via fairseq
 idna==3.10
     # via requests
     # via yarl
@@ -53,18 +76,29 @@ iniconfig==2.1.0
     # via pytest
 isort==6.0.1
     # via pylint
+jinja2==3.1.6
+    # via torch
+joblib==1.5.0
+    # via nltk
+    # via scikit-learn
 jsonschema==4.23.0
     # via nbformat
 jsonschema-specifications==2024.10.1
     # via jsonschema
 jupyter-core==5.7.2
     # via nbformat
+lxml==5.4.0
+    # via sacrebleu
 markdown-it-py==3.0.0
     # via rich
+markupsafe==3.0.2
+    # via jinja2
 mccabe==0.7.0
     # via pylint
 mdurl==0.1.2
     # via markdown-it-py
+mpmath==1.3.0
+    # via sympy
 multidict==6.2.0
     # via aiohttp
     # via yarl
@@ -74,20 +108,42 @@ mypy-extensions==1.0.0
     # via mypy
 nbformat==5.10.4
     # via docstring-gen
+networkx==3.4.2
+    # via torch
+nltk==3.8.1
+    # via transcorpus
+numpy==2.2.5
+    # via fairseq
+    # via sacrebleu
+    # via scikit-learn
+    # via scipy
+    # via torchvision
+omegaconf==2.0.6
+    # via fairseq
+    # via hydra-core
 openai==0.27.2
     # via docstring-gen
 packaging==24.2
+    # via fairseq
     # via pytest
+pillow==11.2.1
+    # via torchvision
+pip==24.0
+    # via transcorpus
 platformdirs==4.3.7
     # via jupyter-core
     # via pylint
 pluggy==1.5.0
     # via pytest
+portalocker==3.1.1
+    # via sacrebleu
 propcache==0.3.1
     # via aiohttp
     # via yarl
 pycodestyle==2.13.0
     # via autopep8
+pycparser==2.22
+    # via cffi
 pydantic==2.11.2
     # via transcorpus
 pydantic-core==2.33.1
@@ -101,11 +157,17 @@ pytest==8.3.5
     # via pytest-mock
 pytest-cov==6.1.0
 pytest-mock==3.14.0
+pyyaml==6.0.2
+    # via omegaconf
 readchar==4.2.1
     # via transcorpus
 referencing==0.36.2
     # via jsonschema
     # via jsonschema-specifications
+regex==2024.11.6
+    # via fairseq
+    # via nltk
+    # via sacrebleu
 requests==2.32.3
     # via openai
     # via transcorpus
@@ -115,13 +177,45 @@ rpds-py==0.24.0
     # via jsonschema
     # via referencing
 ruff==0.11.6
+sacrebleu==2.5.1
+    # via fairseq
+scikit-learn==1.6.1
+    # via fairseq
+scipy==1.15.3
+    # via scikit-learn
+sentencepiece==0.2.0
+    # via transcorpus
 shellingham==1.5.4
     # via typer
 snowballstemmer==2.2.0
     # via pydocstyle
+sympy==1.14.0
+    # via torch
+tabulate==0.9.0
+    # via sacrebleu
+threadpoolctl==3.6.0
+    # via scikit-learn
+tomli==2.2.1
+    # via autopep8
+    # via coverage
+    # via mypy
+    # via pylint
+    # via pytest
 tomlkit==0.13.2
     # via pylint
+torch==2.7.0
+    # via fairseq
+    # via torchaudio
+    # via torchvision
+    # via transcorpus
+torchaudio==2.7.0
+    # via fairseq
+    # via transcorpus
+torchvision==0.22.0
+    # via transcorpus
 tqdm==4.67.1
+    # via fairseq
+    # via nltk
     # via openai
     # via transcorpus
 traitlets==5.14.3
@@ -133,10 +227,15 @@ types-requests==2.32.0.20250328
     # via types-tqdm
 types-tqdm==4.67.0.20250404
 typing-extensions==4.13.0
+    # via astroid
+    # via multidict
     # via mypy
+    # via omegaconf
     # via pydantic
     # via pydantic-core
     # via referencing
+    # via rich
+    # via torch
     # via typer
     # via typing-inspection
 typing-inspection==0.4.0
