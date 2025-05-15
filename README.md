@@ -12,24 +12,34 @@
 
 - [ ] translate:
  - [x] create a function that would split huge corpus consistantly (fast)
- - [ ] preprocessing function
+ - [x] preprocessing function
   - [x] split to sentences
   - [x] tokenize and write to file
   - [x] from file to binary
-  - [ ] consider having a process bar
-  - [ ] consider more verbose output
-  - [ ] consider having the possibility to pick up from where it left off
-  - [ ] reconcider change generate-test file as it could be written over
+  - [x] consider having a process bar for preprocessing
+  - [x] consider more verbose output
+  - [x] reconcider change generate-test file as it could be written over
+ - [x] Translation checkpointer
+  - [x] consider having the possibility to pick up from where it left off
+  - [x] needs to keep track to where are each split state
+  - [x] will work with a DB with state and unique ids
  - [x] translation cpu
   -[x] write function that calls generate in python
  - [x] translation gpu
- - [ ] postprocessing function
+ - [x] function that would loop over all the splits
+  - [x] Each time a process is finished, could launch the next one
+  - [x] function without split index would run the next that was not started
+ - [ x postprocessing function
   - [x] reconciliate sentences
-  - [ ] merge function if last split is translated
-  - [ ] delete everything that is not needed
+  - [x] merge function if last split is translated
+  - [x] delete everything that is not needed
+- [ ] check sizes in tqdm GB vs len?
+- [ ] Think of a way to work asynchronously (peprocessing while translating)
+- [ ] limite verbose
+- [ ] refactor code
+- [ ] Test on real data
 - [ ] run rye ci
 
-- [ ] improve demo size to 10K
- - [ ] give example of gpu memory + batch info + time
-- [ ] Test on real data
+- [x] improve demo size to 10K
+ - [x] give example of gpu memory + batch info + time
 

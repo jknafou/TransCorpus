@@ -20,6 +20,7 @@ dependencies = [
     "torchvision==0.22.0+cu128",
     "torchaudio==2.7.0+cu128",
     "fairseq @ git+https://github.com/facebookresearch/fairseq@ecbf110e1eb43861214b05fa001eff584954f65a",
+    "psutil>=7.0.0",
 ]
 [[tool.rye.sources]]
 name = "pytorch"
