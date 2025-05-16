@@ -1,7 +1,7 @@
 {
 	"sentence_tokenizer_url": "https://transcorpus.s3.text-analytics.ch/sentence_tokenizer_pmc2.pickle",
 	"model_tokenizer_url": "https://transcorpus.s3.text-analytics.ch/spm.128k.model",
-	"model_tokenizer_dictionary_url": "https://transcorpus.s3.text-analytics.ch/model_dict.128k.txt",
+	"model_tokenizer_dictionary_url": "https://transcorpus.s3.text-analytics.ch/data_dict.128k.txt",
     "model_url": "https://transcorpus.s3.text-analytics.ch/1.2B_last_checkpoint.pt",
 	"model_dictionary_url": "https://transcorpus.s3.text-analytics.ch/model_dict.128k.txt",
 	"model_language_pairs_url": "https://transcorpus.s3.text-analytics.ch/language_pairs_small_models.txt"
