@@ -35,8 +35,10 @@
   - [x] delete everything that is not needed
 - [ ] check sizes in tqdm GB vs len?
 - [ ] Think of a way to work asynchronously (peprocessing while translating)
+- [ ] Would it be possible to give multiple binary file to the generate function?
 - [ ] limite verbose
 - [ ] refactor code
+- [ ] download_file function modified, check if still correct for the rest
 - [ ] Test on real data
 - [ ] run rye ci
 

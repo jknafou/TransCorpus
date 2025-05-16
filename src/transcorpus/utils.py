@@ -17,6 +17,9 @@ Typical usage example:
 from pathlib import Path
 
 from transcorpus.config import load_domains, load_translation_models
+import click
+from transcorpus.languages import M2M100_Languages
+from pydantic.networks import HttpUrl
 
 
 def create_transcorpus_dir() -> Path:
@@ -42,7 +45,9 @@ def create_transcorpus_dir() -> Path:
     return transcorpus_dir
 
 
-def get_domain_url(domain_name: str, data_type: str, file_suffix: str) -> tuple:
+def get_domain_url(
+    domain_name: str, data_type: str, file_suffix: str
+) -> tuple[HttpUrl, Path, dict]:
     """
     Get the URL and directory for a specific domain and data type.
 
@@ -85,6 +90,7 @@ def get_domain_url(domain_name: str, data_type: str, file_suffix: str) -> tuple:
         raise ValueError(
             f"No '{file_suffix}' found for {data_type} in {domain_name}"
         )
+    url = HttpUrl(url)
     transcorpus_dir = create_transcorpus_dir()
     return url, transcorpus_dir, domains_dict
 
@@ -93,6 +99,25 @@ def get_model_translation_url():
     return load_translation_models(
         Path(__file__).resolve().parent / "translation_urls.json"
     )
+
+
+def url_dir2path(url: HttpUrl, directory: Path) -> tuple[Path, str]:
+    """Convert a URL and directory to a file path.
+
+    This function takes a URL and a directory, and returns the corresponding
+    file path. The file name is derived from the URL.
+
+        Args:
+            url (HttpUrl): The URL of the file.
+            directory (Path): The directory where the file should be saved.
+
+        Returns:
+            Path: The file path corresponding to the URL and directory.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    file_name = Path(str(url)).name
+    file_path = directory / file_name
+    return file_path, file_name
 
 
 abbreviation = [
@@ -171,3 +196,17 @@ abbreviation = [
     "vs",
     "wt",
 ]
+
+
+def preview_proposal_messsage(
+    corpus_name: str,
+    source_language: M2M100_Languages,
+    target_language: M2M100_Languages,
+    demo: bool,
+):
+    message = "You can now run the command preview to see the translation."
+    if demo:
+        message += f"\ntranscorpus preview {corpus_name} -l {source_language} -l {target_language} -c 100 -d"
+    else:
+        message += f"\ntranscorpus preview {corpus_name} -l {source_language} -l {target_language} -c 100"
+    click.secho(message, fg="green")

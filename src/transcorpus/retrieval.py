@@ -27,12 +27,10 @@ from pydantic import BaseModel, HttpUrl
 from tqdm.auto import tqdm
 
 from transcorpus.models import DataType, FileSuffix
-from transcorpus.utils import get_domain_url
+from transcorpus.utils import get_domain_url, url_dir2path
 
 
-def download_file(
-    url: HttpUrl, directory: Path, v: bool = True
-) -> Optional[Path]:
+def download_file(url: HttpUrl, directory: Path, v: bool = True) -> Path:
     """Download a file from the specified URL to the given directory.
 
     This function downloads a file from the provided URL and saves it in the
@@ -57,20 +55,15 @@ def download_file(
             Downloaded: /tmp/file
             PosixPath('/tmp/file')
     """
-    directory.mkdir(parents=True, exist_ok=True)
-    file_name = Path(str(url)).name
-    file_path = directory / file_name
-
+    file_path, file_name = url_dir2path(url, directory)
     if file_path.exists():
         if v:
             print(f"File already downloaded: {file_name}")
         return file_path
-
     try:
         response = requests.get(str(url), stream=True, timeout=10)
         response.raise_for_status()
         total_size = int(response.headers.get("Content-Length", 0))
-
         with open(file_path, "wb") as f:
             with tqdm(
                 total=total_size, unit="B", unit_scale=True, desc=file_name
@@ -78,21 +71,16 @@ def download_file(
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
                     pbar.update(len(chunk))
-
         print(f"Downloaded: {file_path}")
         return file_path
-
     except requests.exceptions.RequestException as e:
-        print(f"Download failed: {e}")
         if file_path.exists():
             file_path.unlink()
-        return None
-
+        raise click.ClickException(f"Failed to download {file_name}: {e}")
     except KeyboardInterrupt:
-        print("\nDownload interrupted by user.")
         if file_path.exists():
             file_path.unlink()
-        raise
+        raise click.ClickException("Download interrupted by user.")
 
 
 def download_data(

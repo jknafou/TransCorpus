@@ -68,6 +68,22 @@ class TranslationCheckpointing:
             )
             conn.commit()
 
+    def set_pending(self, split_number: int):
+        """Set the status of a split to 'pending' and clear related fields."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE splits
+                SET status = 'pending',
+                    unique_id = NULL,
+                    claimed_at = NULL,
+                    completed_at = NULL
+                WHERE split_number = ?
+                """,
+                (split_number,),
+            )
+            conn.commit()
+
     def get_stage(self, split_number: int) -> int:
         with self._connect() as conn:
             cursor = conn.execute(
@@ -80,7 +96,9 @@ class TranslationCheckpointing:
             result = cursor.fetchone()
             return result[0] if result else 0
 
-    def claim_next_split(self, max_retries=5) -> int | None:
+    def claim_next_split(
+        self, max_retries=5, max_stage: int | None = None
+    ) -> int | None:
         """Claim next split after verifying active processes"""
         unique_id = get_unique_process_id()
         for retry in range(max_retries):
@@ -105,13 +123,24 @@ class TranslationCheckpointing:
                             """,
                                 (split_number,),
                             )
-                    # Now find next pending split
-                    cursor.execute("""
-                        SELECT split_number FROM splits
-                        WHERE status = 'pending'
-                        ORDER BY split_number
-                        LIMIT 1
-                    """)
+                    # Find next pending split (with stage filter if needed)
+                    if max_stage is not None:
+                        cursor.execute(
+                            """
+                            SELECT split_number FROM splits
+                            WHERE status = 'pending' AND completed_stage < ?
+                            ORDER BY split_number
+                            LIMIT 1
+                            """,
+                            (max_stage,),  # Pass max_stage as a parameter
+                        )
+                    else:
+                        cursor.execute("""
+                            SELECT split_number FROM splits
+                            WHERE status = 'pending'
+                            ORDER BY split_number
+                            LIMIT 1
+                        """)  # No parameters needed
                     result = cursor.fetchone()
                     if not result:
                         return None  # No splits left

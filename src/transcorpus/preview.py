@@ -79,7 +79,7 @@ def preview_txt(
             - preview_lines (list): The lines to preview.
             - preview_ids (list): The IDs of the lines.
             - language_list (list): The list of languages.
-            - original_language (str): The original language of the corpus.
+            - source_language (str): The source language of the corpus.
 
     Raises:
         FileNotFoundError: If the file does not exist.
@@ -102,10 +102,10 @@ def preview_txt(
     corpus_id_url = (
         getattr(domain.id, file_suffix, None) if hasattr(domain, "id") else None
     )
-    original_language = domain.language
+    source_language = domain.language
     corpus_file_name = Path(str(corpus_url)).name
 
-    language_list = sorted(set(language), key=lambda x: x != original_language)
+    language_list = sorted(set(language), key=lambda x: x != source_language)
 
     if not corpus_id_url:
         preview_ids = [str(i) for i in range(start_at, start_at + count)]
@@ -114,14 +114,14 @@ def preview_txt(
         id_path = (
             transcorpus_dir
             / domain_name
-            / original_language
+            / source_language
             / Path(str(corpus_id_url)).name
         )
         preview_ids = read_file_lines(id_path, start_at, start_at + count)
 
     preview_lines: list[list[str]] = []
     for lang in language_list:
-        is_original = lang == original_language
+        is_original = lang == source_language
         file_path = transcorpus_dir / domain_name / lang / corpus_file_name
 
         validate_file(file_path, is_original)
@@ -142,13 +142,13 @@ def preview_txt(
         lines = read_file_lines(file_path, start_at, start_at + count)
         preview_lines.append(lines)
 
-    return preview_lines, preview_ids, language_list, original_language
+    return preview_lines, preview_ids, language_list, source_language
 
 
 def title(
     corpus_id: Optional[str | int] = None,
     language: Optional[str | int] = None,
-    original_language: Optional[str] = None,
+    source_language: Optional[str] = None,
 ):
     """
     Generate a title for the preview.
@@ -156,7 +156,7 @@ def title(
     Args:
         corpus_id (Optional[str | int]): The ID of the corpus.
         language (Optional[str | int]): The language of the corpus.
-        original_language (Optional[str]): The original language of the corpus.
+        source_language (Optional[str]): The source language of the corpus.
 
     Returns:
         str: The formatted title string.
@@ -165,25 +165,23 @@ def title(
         [
             corpus_id is None,
             language is None,
-            original_language is None,
+            source_language is None,
         ]
     ):
         raise ValueError(
-            "At least one of id or both language and original_language must be provided."
+            "At least one of id or both language and source_language must be provided."
         )
-    if (not language and original_language) or (
-        not original_language and language
-    ):
+    if (not language and source_language) or (not source_language and language):
         raise ValueError(
-            "If language is provided, both 'language' and 'original_language' must be provided."
+            "If language is provided, both 'language' and 'source_language' must be provided."
         )
     source_or_target = (
         (
             "■ Source language"
-            if language == original_language
+            if language == source_language
             else "<-> Target language"
         )
-        if language and original_language
+        if language and source_language
         else ""
     )
     source_or_target = (
@@ -201,17 +199,17 @@ def title(
 #     preview_lines: list,
 #     preview_ids: list,
 #     language_list: list,
-#     original_language: str,
+#     source_language: M2M100_Languages,
 # ):
 #     for *pl, pi in zip(*preview_lines, preview_ids):
 #         if len(pl) == 1:
-#             print_one_language(pl[0], pi, language_list[0], original_language)
+#             print_one_language(pl[0], pi, language_list[0], source_language)
 #         else:
 #             print_two_languages(
 #                 pl,
 #                 pi,
 #                 language_list,
-#                 original_language,
+#                 source_language,
 #             )
 
 
@@ -219,7 +217,7 @@ def display_preview(
     preview_lines: list,
     preview_ids: list,
     language_list: list,
-    original_language: str,
+    source_language: M2M100_Languages,
 ):
     """
     Display the preview of articles with navigation.
@@ -228,14 +226,14 @@ def display_preview(
         preview_lines (list): The lines to preview.
         preview_ids (list): The IDs of the lines.
         language_list (list): The list of languages.
-        original_language (str): The original language of the corpus.
+        source_language (str): The source language of the corpus.
 
     Example:
         display_preview(
             preview_lines,
             preview_ids,
             language_list,
-            original_language,
+            source_language,
         )
     """
     articles = []
@@ -252,9 +250,9 @@ def display_preview(
         # Display the current article
         pl, pi = articles[current_idx]
         if len(pl) == 1:
-            print_one_language(pl[0], pi, language_list[0], original_language)
+            print_one_language(pl[0], pi, language_list[0], source_language)
         else:
-            print_two_languages(pl, pi, language_list, original_language)
+            print_two_languages(pl, pi, language_list, source_language)
 
         # Print navigation instructions
         print(f"\nArticle {current_idx + 1}/{total_articles}")
@@ -286,8 +284,8 @@ def display_preview(
 def print_one_language(
     preview_line: str,
     preview_id: str | int,
-    language: str,
-    original_language: str,
+    language: M2M100_Languages,
+    source_language: M2M100_Languages,
 ):
     """
     Print the preview for a single language next to each other taking into account the length of the terminal.
@@ -296,18 +294,18 @@ def print_one_language(
         preview_line (str): The line to preview.
         preview_id (str | int): The ID of the line.
         language (str): The language of the line.
-        original_language (str): The original language of the corpus.
+        source_language (str): The source language of the corpus.
 
     Example:
         print_one_language(
             preview_line,
             preview_id,
             language,
-            original_language,
+            source_language,
         )
     """
     print(shutil.get_terminal_size().columns * "\u2015")
-    print(title(preview_id, language, original_language))
+    print(title(preview_id, language, source_language))
     print(shutil.get_terminal_size().columns * "\u2015")
     print(preview_line.strip())
     print(shutil.get_terminal_size().columns * " ")
@@ -317,7 +315,7 @@ def print_two_languages(
     preview_line: list,
     preview_id: str | int,
     language_list: list,
-    original_language: str,
+    source_language: M2M100_Languages,
 ):
     """
     Print the preview for two languages.
@@ -326,14 +324,14 @@ def print_two_languages(
         preview_line (list): The lines to preview.
         preview_id (str | int): The ID of the line.
         language_list (list): The list of languages.
-        original_language (str): The original language of the corpus.
+        source_language (str): The source language of the corpus.
 
     Example:
         print_two_languages(
             preview_line,
             preview_id,
             language_list,
-            original_language,
+            source_language,
         )
     """
     term_width = shutil.get_terminal_size().columns
@@ -344,7 +342,7 @@ def print_two_languages(
     for i, pl in enumerate(preview_line):
         centered_title = title(
             language=language_list[i],
-            original_language=original_language,
+            source_language=source_language,
         )
         space_left = (col_width - len(centered_title)) // 2
         centered_title = (space_left * " " + centered_title + space_left * " ")[
@@ -439,13 +437,11 @@ def preview(
     global global_domain_name
     global_domain_name = corpus_name
     file_suffix = SuffixModel(flag=demo)
-    preview_lines, preview_ids, language_list, original_language = preview_txt(
+    preview_lines, preview_ids, language_list, source_language = preview_txt(
         domain_name=corpus_name,
         file_suffix=file_suffix.get_suffix(),
         count=count,
         start_at=start_at,
         language=language,
     )
-    display_preview(
-        preview_lines, preview_ids, language_list, original_language
-    )
+    display_preview(preview_lines, preview_ids, language_list, source_language)

@@ -16,15 +16,27 @@ dependencies = [
     "debugpy>=1.8.14",
     "nltk<3.8.2",
     "sentencepiece>=0.2.0",
-    "torch==2.7.0+cu128",
-    "torchvision==0.22.0+cu128",
-    "torchaudio==2.7.0+cu128",
+    # Platform-specific torch dependencies
+    "torch==2.7.0; sys_platform == 'darwin'",
+    "torch==2.7.0+cu128; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torchvision==0.22.0; sys_platform == 'darwin'",
+    "torchvision==0.22.0+cu128; sys_platform == 'linux' or sys_platform == 'win32'",
+    "torchaudio==2.7.0; sys_platform == 'darwin'",
+    "torchaudio==2.7.0+cu128; sys_platform == 'linux' or sys_platform == 'win32'",
     "fairseq @ git+https://github.com/facebookresearch/fairseq@ecbf110e1eb43861214b05fa001eff584954f65a",
     "psutil>=7.0.0",
+    "tensorboardx>=2.6.2.2",
 ]
+
 [[tool.rye.sources]]
-name = "pytorch"
+name = "pytorch-cuda"
 url = "https://download.pytorch.org/whl/cu128"
+marker = "sys_platform == 'linux' or sys_platform == 'win32'"
+
+[[tool.rye.sources]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+marker = "sys_platform == 'darwin'"
 
 readme = "README.md"
 requires-python = ">=3.7, <3.11"

@@ -25,11 +25,9 @@ from typing import Optional, get_args
 import click
 from fairseq.options import (
     get_generation_parser,
-    get_preprocessing_parser,
     parse_args_and_arch,
 )
 from fairseq_cli.generate import main as generate_main
-from fairseq_cli.preprocess import main as preprocess_main
 from omegaconf import OmegaConf
 from fairseq.dataclass.configs import FairseqConfig
 import torch
@@ -41,22 +39,11 @@ from transcorpus.preprocess import spm_encode
 from transcorpus.retrieval import SuffixModel, download_file
 import sys
 from pydocstyle.wordlists import stem
-from transcorpus.utils import (
-    abbreviation,
-    get_domain_url,
-    get_model_translation_url,
-)
-
-
-def preview_proposal_messsage(
-    corpus_name: str, original_language: str, target: str, demo: bool
-):
-    message = "You can now run the command preview to see the translation."
-    if demo:
-        message += f"\ntranscorpus preview {corpus_name} -l {original_language} -l {target} -c 100 -d"
-    else:
-        message += f"\ntranscorpus preview {corpus_name} -l {original_language} -l {target} -c 100"
-    click.secho(message, fg="green")
+from transcorpus.utils import preview_proposal_messsage
+from transcorpus.preprocess import process_split
+from transcorpus.preprocess import sentence_splitter
+from transcorpus.preprocess import preprocess_data
+from transcorpus.preprocess import run_preprocess
 
 
 def kill_data_workers(process_list):
@@ -83,109 +70,11 @@ def kill_data_workers(process_list):
     return len(remaining) == 0
 
 
-def process_split(filename, split_index, num_splits, message=""):
-    filesize = os.path.getsize(filename)
-    split_index -= 1
-    start = int(split_index * filesize / num_splits)
-    end = int((split_index + 1) * filesize / num_splits)
-
-    with open(filename, "rb") as f:
-        if start > 0:
-            f.seek(start)
-            f.readline()
-
-        pbar = tqdm(
-            total=end - start,
-            unit="B",
-            unit_scale=True,
-            desc=message,
-        )
-        while True:
-            pos = f.tell()
-            if pos >= end:
-                break
-            line = f.readline()
-            if not line:
-                break
-            pbar.update(len(line))
-            yield line.decode("utf-8").strip()
-    pbar.close()
-
-
-def too_small_sentence_concat(sentences, too_small_sentences_length=10):
-    # has_sth_changed = False
-    no_more_small_sentence = True
-    while True:
-        if len(sentences) == 1:
-            break
-        for i in range(len(sentences)):
-            if len(sentences[i]) <= too_small_sentences_length:
-                if i == 0:
-                    sentences[i + 1] += sentences[i] + " " + sentences[i + 1]
-                else:
-                    sentences[i - 1] = sentences[i - 1] + " " + sentences[i]
-                sentences.remove(sentences[i])
-                no_more_small_sentence = False
-                # has_sth_changed = True
-                break
-        if no_more_small_sentence:
-            break
-        no_more_small_sentence = True
-    # return sentences, has_sth_changed
-    return sentences
-
-
-def sentence_splitter(text, tokenizer):
-    text = list(tokenizer.tokenize(text))
-    text = too_small_sentence_concat(text)
-    abstract = []
-    for sentence in text:
-        abstract.append(sentence)
-    return abstract
-
-
-def preprocess_data(
-    corpus_path: Path,
-    source_lang: str,
-    target_lang: str,
-    model_dict_path: Path,
-    dest_dir: Path,
-):
-    click.secho(
-        "Data pre-processing: Building the dictionary and binarizing the data.",
-        fg="green",
-    )
-    args = get_preprocessing_parser().parse_args(
-        [
-            "--workers",
-            "1",
-            "--source-lang",
-            source_lang,
-            "--target-lang",
-            target_lang,
-            "--only-source",
-            "--testpref",
-            corpus_path.as_posix(),
-            "--thresholdsrc",
-            "0",
-            "--thresholdtgt",
-            "0",
-            "--destdir",
-            dest_dir.as_posix(),
-            "--srcdict",
-            model_dict_path.as_posix(),
-            "--tgtdict",
-            model_dict_path.as_posix(),
-        ]
-    )
-    preprocess_main(args)
-
-
 def generate_translation(
     data_bin_dir: Path,  # Binarized data directory (positional arg)
     model_path: Path,  # Model checkpoint path
-    source_lang: str,
-    target_lang: str,
+    source_language: M2M100_Languages,
+    target_language: M2M100_Languages,
     results_path: Path,
     fixed_dictionary: Path,
     lang_pairs: Path,
@@ -202,9 +91,9 @@ def generate_translation(
         "--fixed-dictionary",
         str(fixed_dictionary),
         "-s",
-        source_lang,
+        source_language,
         "-t",
-        target_lang,
+        target_language,
         "--results-path",
         str(results_path),
         "--num-workers",
@@ -317,326 +206,67 @@ def merge_splits(
                     outfile.write(line)
 
 
+def get_model_assets(
+    model_path: dict, transcorpus_dir: Path
+) -> tuple[Path, Path, Path]:
+    path_tuple = []
+    for m in ["model_url", "model_dictionary_url", "model_language_pairs_url"]:
+        path_tuple.append(
+            download_file(
+                url=HttpUrl(model_path[m]),
+                directory=transcorpus_dir / "models",
+                v=False,
+            )
+        )
+        if path_tuple[-1] is None:
+            raise click.UsageError(
+                f"Model dictionary file not found at {path_tuple[-1]}."
+            )
+    return tuple(path_tuple)
+
+
 def run_translation(
     corpus_name: str,
-    target: M2M100_Languages,
+    target_language: M2M100_Languages,
     split_index: Optional[int],
     num_splits: int,
     demo: bool,
     max_tokens: int,
 ):
-    file_suffix = SuffixModel(flag=demo)
-    corpus_url, transcorpus_dir, domains_dict = get_domain_url(
-        domain_name=corpus_name,
-        data_type="corpus",
-        file_suffix=file_suffix.get_suffix(),
+    recursive_preprocess = num_splits > 1 and not split_index
+    result = run_preprocess(
+        corpus_name=corpus_name,
+        target_language=target_language,
+        split_index=split_index,
+        num_splits=num_splits,
+        demo=demo,
+        from_translation=True,
     )
-    domain = domains_dict[corpus_name]
-    original_language = domain.language
-
-    if original_language == target:
-        raise click.UsageError(
-            f"Original language '{original_language}' is the same as target '{target}'."
-        )
-
-    corpus_path = (
-        transcorpus_dir
-        / corpus_name
-        / original_language
-        / Path(str(corpus_url)).name
-    )
-
-    dest_path = (
-        transcorpus_dir / corpus_name / target / Path(str(corpus_url)).name
-    )
-    if dest_path.exists():
-        click.secho(
-            f"Corpus already translated.",
-            fg="yellow",
-        )
-        preview_proposal_messsage(
-            corpus_name=corpus_name,
-            original_language=original_language,
-            target=target,
-            demo=demo,
-        )
-        exit(0)
-
-    if num_splits < 1:
-        raise click.UsageError(
-            f"Number of splits must be at least 1, but got {num_splits}."
-        )
-    elif num_splits == 1:
-        click.secho(
-            f"Processing the entire file at once (num_splits=1).",
-            fg="yellow",
-        )
-
-    if split_index is None and num_splits > 1:
-        click.secho(
-            f"Split index not provided. Will process the whole iteratively by split {num_splits} times.",
-            fg="yellow",
-        )
-
-    if split_index is not None and (
-        split_index < 1 or split_index > num_splits
-    ):
-        raise click.UsageError(
-            f"Split index must be between 1 and {num_splits}, but got {split_index}."
-        )
-
-    if not corpus_path.exists():
-        raise click.UsageError(
-            f"Corpus file '{corpus_path}' does not exist. Please run the download command first."
-        )
-
-    file_size_bytes = os.path.getsize(corpus_path)
-    size_gb = file_size_bytes / (1024**3)
-    size_mb = file_size_bytes / (1024**2)
-
-    if size_gb >= 1:
-        size_str = f"{round(size_gb, 2)} GB"
-    else:
-        size_str = f"{round(size_mb, 2)} MB"
-
-    click.secho(
-        f"Corpus file size to be processed: {size_str}",
-        fg="yellow",
-    )
-
-    if split_index is None:
-        checkpoint_path = Path(
-            transcorpus_dir
-            / corpus_name
-            / target
-            / f"checkpoint_{file_suffix.get_suffix()}_{num_splits}.db"
-        )
-        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        checkpoint_db = TranslationCheckpointing(checkpoint_path, num_splits)
-        split_index = checkpoint_db.claim_next_split()
-        if split_index:
-            click.secho(
-                f"Claimed split number: {split_index}",
-                fg="green",
-            )
-        else:
-            click.secho(
-                f"All splits are already completed. No more splits to process.",
-                fg="yellow",
-            )
-            preview_proposal_messsage(
-                corpus_name=corpus_name,
-                original_language=original_language,
-                target=target,
-                demo=demo,
-            )
-            exit(0)
-
-    model_path = get_model_translation_url()
-    sentence_tokenizer_path = download_file(
-        url=HttpUrl(model_path["sentence_tokenizer_url"]),
-        directory=transcorpus_dir / "models",
-        v=False,
-    )
-    if sentence_tokenizer_path is None:
-        raise click.UsageError(
-            f"Sentence tokenizer file not found at {sentence_tokenizer_path}."
-        )
-    sentence_tokenizer = nltk.data.load(sentence_tokenizer_path.as_posix())
-    sentence_tokenizer._params.abbrev_types.update(abbreviation)
-
-    model_tokenizer_path = download_file(
-        url=HttpUrl(model_path["model_tokenizer_url"]),
-        directory=transcorpus_dir / "models",
-        v=False,
-    )
-    if model_tokenizer_path is None:
-        raise click.UsageError(
-            f"Model tokenizer file not found at {model_tokenizer_path}."
-        )
-
-    file_stem = Path(str(corpus_url)).stem
-    tokenized_split_file = (
-        f"{file_stem}.{split_index}_{num_splits}.{original_language}"
-    )
-    tokenized_split_path = (
-        transcorpus_dir / corpus_name / original_language / tokenized_split_file
-    )
-    document_sentences_ids_file = f"{file_stem}.{split_index}_{num_splits}.ids"
-    documents_sentences_ids_path = (
-        transcorpus_dir
-        / corpus_name
-        / original_language
-        / document_sentences_ids_file
-    )
-
-    split_stage = checkpoint_db.get_stage(split_index)
-    if split_stage == 0:
-        if (
-            not tokenized_split_path.exists()
-            or not documents_sentences_ids_path.exists()
-        ):
-            try:
-                temp_tokenized = tokenized_split_path.with_name(
-                    f"{tokenized_split_path.name}.tmp"
-                )
-                temp_ids = documents_sentences_ids_path.with_name(
-                    f"{documents_sentences_ids_path.name}.tmp"
-                )
-                click.secho(
-                    f"Processing split {split_index} of {num_splits} for corpus '{corpus_name}'.",
-                    fg="green",
-                )
-                documents_sentences_ids = []
-                with open(
-                    temp_tokenized,
-                    "w",
-                    encoding="utf-8",
-                ) as f:
-                    with open(
-                        temp_ids,
-                        "w",
-                        encoding="utf-8",
-                    ) as f_ids:
-                        for i, document in enumerate(
-                            process_split(
-                                corpus_path,
-                                split_index,
-                                num_splits,
-                                message=f"Tokenization split {split_index} of {num_splits} for corpus '{corpus_name}'",
-                            )
-                        ):
-                            document = document.strip()
-                            if document:
-                                document = sentence_splitter(
-                                    document, sentence_tokenizer
-                                )
-                                documents_sentences_ids.extend(
-                                    [f"{i}"] * len(document)
-                                )
-                                document, stats = spm_encode(
-                                    model_tokenizer_path, document
-                                )
-                                for sentence in document:
-                                    f.write(sentence + "\n")
-
-                            else:
-                                click.secho(
-                                    f"Empty document found in split {split_index}. Skipping.",
-                                    fg="yellow",
-                                )
-                                continue
-                        f_ids.write("_".join(documents_sentences_ids))
-
-                if stats["num_empty"] > 0:
-                    click.secho(
-                        f"Number of empty lines: {stats['num_empty']}",
-                        fg="yellow",
-                    )
-                if temp_tokenized.exists() and temp_ids.exists():
-                    temp_tokenized.rename(tokenized_split_path)
-                    temp_ids.rename(documents_sentences_ids_path)
-                else:
-                    raise FileNotFoundError(
-                        "Temp files missing after processing"
-                    )
-
-                checkpoint_db.update_stage(split_index, 1)
-            except Exception as e:
-                click.secho(
-                    f"Error during tokenization: {e}",
-                    fg="red",
-                )
-                temp_tokenized.unlink(missing_ok=True)
-                temp_ids.unlink(missing_ok=True)
-                checkpoint_db.update_stage(split_index, 0)
-            except KeyboardInterrupt:
-                click.secho(
-                    "Keyboard interrupt detected. Exiting.",
-                    fg="red",
-                )
-                temp_tokenized.unlink(missing_ok=True)
-                temp_ids.unlink(missing_ok=True)
-                checkpoint_db.update_stage(split_index, 0)
-                exit(0)
-        else:
-            click.secho(
-                f"Tokenized split file '{tokenized_split_path}' and document sentences IDs file '{documents_sentences_ids_path}' already exists. Skipping tokenization.",
-                fg="yellow",
-            )
-            with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
-                documents_sentences_ids = f.read().strip().split("_")
-
-    file_new_name = f"{file_stem}.{split_index}_{num_splits}"
-    dest_dir = transcorpus_dir / corpus_name / target / file_new_name
-    if split_stage > 1:
-        click.secho(
-            f"Resuming split {split_index} at stage {split_stage}.",
-            fg="yellow",
-        )
-    if split_stage < 2:
-        model_tokenizer_dictionary_path = download_file(
-            url=HttpUrl(model_path["model_tokenizer_dictionary_url"]),
-            directory=transcorpus_dir / "models",
-            v=False,
-        )
-        if model_tokenizer_dictionary_path is None:
-            raise click.UsageError(
-                f"Model dictionary file not found at {model_tokenizer_dictionary_path}."
-            )
-
-        split_corpus_path = (
-            transcorpus_dir / corpus_name / original_language / file_new_name
-        )
-        preprocess_data(
-            corpus_path=split_corpus_path,
-            source_lang=original_language,
-            target_lang=target,
-            model_dict_path=model_tokenizer_dictionary_path,
-            dest_dir=dest_dir,
-        )
-        click.secho(
-            f"File sentences processed and binarized.",
-            fg="green",
-        )
-        tokenized_split_path.unlink(missing_ok=True)
-        checkpoint_db.update_stage(split_index, 2)
-
+    if result is None:
+        raise ValueError("run_preprocess returned None unexpectedly")
+    (
+        split_stage,
+        split_index,
+        model_path,
+        transcorpus_dir,
+        dest_dir,
+        source_language,
+        checkpoint_db,
+        checkpoint_path,
+        documents_sentences_ids_path,
+    ) = result
     if split_stage < 3:
-        model_translation_path = download_file(
-            url=HttpUrl(model_path["model_url"]),
-            directory=transcorpus_dir / "models",
-            v=False,
-        )
-        if model_translation_path is None:
-            raise click.UsageError(
-                f"Model dictionary file not found at {model_tokenizer_path}."
+        model_translation_path, model_dictionary_path, language_pairs_path = (
+            get_model_assets(
+                model_path=model_path,
+                transcorpus_dir=transcorpus_dir,
             )
-
-        model_dictionary_path = download_file(
-            url=HttpUrl(model_path["model_dictionary_url"]),
-            directory=transcorpus_dir / "models",
-            v=False,
         )
-        if model_dictionary_path is None:
-            raise click.UsageError(
-                f"Model dictionary file not found at {model_tokenizer_path}."
-            )
-
-        language_pairs_path = download_file(
-            url=HttpUrl(model_path["model_language_pairs_url"]),
-            directory=transcorpus_dir / "models",
-            v=False,
-        )
-        if language_pairs_path is None:
-            raise click.UsageError(
-                f"Language pairs file not found at {model_tokenizer_path}."
-            )
         generate_translation(
             data_bin_dir=dest_dir,
             model_path=model_translation_path,
-            source_lang=original_language,
-            target_lang=target,
+            source_language=source_language,
+            target_language=target_language,
             results_path=dest_dir,
             fixed_dictionary=model_dictionary_path,
             lang_pairs=language_pairs_path,
@@ -648,10 +278,8 @@ def run_translation(
         checkpoint_db.update_stage(split_index, 3)
 
     if split_stage < 4:
-        if split_stage != 0:
-            with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
-                documents_sentences_ids = f.read().strip().split("_")
-
+        with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
+            documents_sentences_ids = f.read().strip().split("_")
         retrieve_translation(
             dest_dir,
             documents_sentences_ids,
@@ -666,28 +294,33 @@ def run_translation(
             dest_dir=dest_dir,
             num_splits=num_splits,
         )
-        preview_proposal_messsage(
-            corpus_name=corpus_name,
-            original_language=original_language,
-            target=target,
-            demo=demo,
-        )
-        if split_index is not None:
-            checkpoint_db.complete_split(split_index)
-            click.secho(
-                f"Completed split number: {split_index}",
-                fg="green",
-            )
+        checkpoint_db.complete_split(split_index)
         uncompleted_splits = checkpoint_db.get_len_uncompleted_splits()
         if uncompleted_splits == 0:
+            click.secho(
+                "Translation completed successfully.",
+                fg="green",
+            )
+            preview_proposal_messsage(
+                corpus_name=corpus_name,
+                source_language=source_language,
+                target_language=target_language,
+                demo=demo,
+            )
             checkpoint_path.unlink(missing_ok=True)
             shutil.rmtree(dest_dir)
             dest_file = Path(str(dest_dir) + ".txt")
             dest_file.unlink(missing_ok=True)
+            # @new_feature documents_sentences_ids_path can be used to
+            # translate the same splits in other languages (same for tokenized
+            # files, but their size is much larger), if you want to keep them,
+            # comment the next line and the tokenized file deletion too.
+            # Modification of the stages handling should also take that into
+            # account. (default 1 after first pass).
             documents_sentences_ids_path.unlink(missing_ok=True)
         exit(0)
 
-    else:
+    if uncompleted_splits > 1 and recursive_preprocess:
         click.secho(
             f"Number of uncompleted splits: {uncompleted_splits}",
             fg="yellow",
@@ -700,7 +333,7 @@ def run_translation(
             )
         run_translation(
             corpus_name=corpus_name,
-            target=target,
+            target_language=target_language,
             split_index=None,
             num_splits=num_splits,
             demo=demo,
@@ -710,26 +343,22 @@ def run_translation(
 
 @click.command()
 @click.argument("corpus_name")
-@click.option(
-    "--target",
-    "-t",
-    required=True,
-    type=click.Choice(get_args(M2M100_Languages)),
-    help="Target language for translation.",
+@click.argument(
+    "target-language", type=click.Choice(get_args(M2M100_Languages))
 )
 @click.option(
     "--split-index",
     "-i",
     type=int,
     default=None,
-    help="Index of the split to process (1-based).",
+    help="index of the split to process (1-based). if not provided, the whole file will be processed iteratively.",
 )
 @click.option(
     "--num-splits",
     "-n",
     type=int,
     default=1,
-    help="Number of splits to divide the file into.",
+    help="number of splits to divide the file into. default is 1 (no split).",
 )
 @click.option(
     "--max-tokens",
@@ -741,7 +370,7 @@ def run_translation(
 @click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
 def translate(
     corpus_name: str,
-    target: M2M100_Languages,
+    target_language: M2M100_Languages,
     split_index: Optional[int],
     num_splits: int,
     demo: bool,
@@ -749,7 +378,7 @@ def translate(
 ):
     run_translation(
         corpus_name=corpus_name,
-        target=target,
+        target_language=target_language,
         split_index=split_index,
         num_splits=num_splits,
         demo=demo,
