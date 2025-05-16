@@ -40,6 +40,8 @@ transcorpus translate [corpus_name] [language] --num-split 100
 ```bash
 transcorpus preview [corpus_name] [language1] Opt[language2]
 ```
+![alt text](https://transcorpus.s3.text-analytics.ch/preview.png "Example of two languages next to each other")
+
 A demo mode can be tested using the -d flag for each command.
 
 ## Preprocess and Translate (Multi-GPU Example)
