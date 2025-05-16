@@ -204,6 +204,7 @@ def merge_splits(
             ) as infile:
                 for line in infile:
                     outfile.write(line)
+            split_path.unlink(missing_ok=True)
 
 
 def get_model_assets(
@@ -211,6 +212,11 @@ def get_model_assets(
 ) -> tuple[Path, Path, Path]:
     path_tuple = []
     for m in ["model_url", "model_dictionary_url", "model_language_pairs_url"]:
+        if m == "model_url":
+            click.secho(
+                "Downloading the model. This may take a while.",
+                fg="green",
+            )
         path_tuple.append(
             download_file(
                 url=HttpUrl(model_path[m]),
@@ -276,7 +282,6 @@ def run_translation(
             if item.is_file() and item.name != "generate-test.txt":
                 item.unlink(missing_ok=True)
         checkpoint_db.update_stage(split_index, 3)
-
     if split_stage < 4:
         with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
             documents_sentences_ids = f.read().strip().split("_")
@@ -286,8 +291,15 @@ def run_translation(
         )
         generated_translation_path = dest_dir / "generate-test.txt"
         generated_translation_path.unlink(missing_ok=True)
+        dest_dir.rmdir()
+        # @new_feature documents_sentences_ids_path can be used to
+        # translate the same splits in other languages (same for tokenized
+        # files, but their size is much larger), if you want to keep them,
+        # comment the next line and the tokenized file deletion too.
+        # Modification of the stages handling should also take that into
+        # account. (default 1 after first pass).
+        documents_sentences_ids_path.unlink(missing_ok=True)
         checkpoint_db.update_stage(split_index, 4)
-
     uncompleted_splits = checkpoint_db.get_len_uncompleted_splits()
     if uncompleted_splits == 1:
         merge_splits(
@@ -308,16 +320,8 @@ def run_translation(
                 demo=demo,
             )
             checkpoint_path.unlink(missing_ok=True)
-            shutil.rmtree(dest_dir)
             dest_file = Path(str(dest_dir) + ".txt")
             dest_file.unlink(missing_ok=True)
-            # @new_feature documents_sentences_ids_path can be used to
-            # translate the same splits in other languages (same for tokenized
-            # files, but their size is much larger), if you want to keep them,
-            # comment the next line and the tokenized file deletion too.
-            # Modification of the stages handling should also take that into
-            # account. (default 1 after first pass).
-            documents_sentences_ids_path.unlink(missing_ok=True)
         exit(0)
 
     if uncompleted_splits > 1 and recursive_preprocess:
@@ -328,7 +332,7 @@ def run_translation(
         if split_index is not None:
             checkpoint_db.complete_split(split_index)
             click.secho(
-                f"Launching the next split.",
+                "Launching the next split.",
                 fg="green",
             )
         run_translation(
@@ -365,7 +369,11 @@ def run_translation(
     "-m",
     type=int,
     default=2048,
-    help="Maximum number of tokens per batch. Default is 2048 (to avoid crash in small config). For a GPU with 32GB of memory, we recommend about 8192, for 40GB about 19456... However, this is not a strict rule. You can try to increase it to whatever value you want, but you might get an OOM error.",
+    help="Maximum number of tokens per batch. Default is 2048 (to avoid crash"
+    " in small config). For a GPU with 32GB of memory, we recommend about 8192,"
+    " for 40GB about 24320... However, this is not a strict rule. You can try"
+    " to increase it to whatever value you want, but you might get an OOM"
+    " error.",
 )
 @click.option("--demo", "-d", is_flag=True, help="Run in demo mode.")
 def translate(

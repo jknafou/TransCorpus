@@ -211,23 +211,3 @@ class TranslationCheckpointing:
             if result
             else None
         )
-
-
-# if __name__ == "__main__":
-#     db_path = Path("test_splits.db")
-#     split_db = TranslationCheckpointing(db_path, 10)
-#     # split_db.add_splits(10)
-#
-#     # Example usage
-#     print("Uncompleted splits count:", split_db.get_len_uncompleted_splits())
-#     split_number = split_db.claim_next_split()
-#     if split_number:
-#         print(f"Claimed split number: {split_number}")
-#         # Simulate work
-#         time.sleep(2)
-#         split_db.complete_split(split_number)
-#         print(f"Completed split number: {split_number}")
-#     else:
-#         print("No splits available.")
-#
-#     print("Uncompleted splits count:", split_db.get_len_uncompleted_splits())

@@ -114,11 +114,15 @@ def validate_splits(num_splits: int, split_index: Optional[int]) -> None:
         )
 
 
-def validate_file_exists(corpus_path: Path) -> None:
+def validate_file_exists(
+    corpus_path: Path, corpus_name: str, demo: bool
+) -> None:
     """Check if a critical file exists."""
+    cmd = f"transcorpus download-corpus {corpus_name}"
+    cmd = cmd + " -d" if demo else cmd
     if not corpus_path.exists():
         raise click.UsageError(
-            f"Corpus file '{corpus_path}' does not exist. Please run the download command first."
+            f"Corpus file '{corpus_path}' does not exist. Please run the following command to download it:\n{cmd}"
         )
 
 
@@ -443,6 +447,13 @@ def process_init(
         split_index=split_index,
         num_splits=num_splits,
     )
+    check_already_translated(
+        dest_path=dest_path,
+        corpus_name=corpus_name,
+        target_language=target_language,
+        source_language=source_language,
+        demo=demo,
+    )
     validate_languages(
         source_language=source_language,
         target_language=target_language,
@@ -453,12 +464,7 @@ def process_init(
     )
     validate_file_exists(
         corpus_path=corpus_path,
-    )
-    check_already_translated(
-        dest_path=dest_path,
         corpus_name=corpus_name,
-        target_language=target_language,
-        source_language=source_language,
         demo=demo,
     )
     if split_index == 1:
@@ -727,7 +733,7 @@ def run_preprocess(
     )
     split_stage = checkpoint_db.get_stage(split_index)
     if split_stage == 0:
-        documents_sentences_ids = tokenize_split_by_sentence(
+        tokenize_split_by_sentence(
             model_path=model_path,
             corpus_path=corpus_path,
             split_index=split_index,
@@ -766,10 +772,6 @@ def run_preprocess(
             from_translation=from_translation,
         )
     if from_translation:
-        model_tokenizer_path = url_dir2path(
-            url=model_path["model_tokenizer_url"],
-            directory=transcorpus_dir / "models",
-        )
         dest_dir = split_dest_dir(
             corpus_url=corpus_url,
             split_index=split_index,

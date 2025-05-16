@@ -20,6 +20,7 @@ $ python retrieval.py download_corpus bio --demo
 
 from pathlib import Path
 from typing import Optional
+import os, time
 
 import click
 import requests
@@ -30,57 +31,113 @@ from transcorpus.models import DataType, FileSuffix
 from transcorpus.utils import get_domain_url, url_dir2path
 
 
-def download_file(url: HttpUrl, directory: Path, v: bool = True) -> Path:
-    """Download a file from the specified URL to the given directory.
+# def download_file(url: HttpUrl, directory: Path, v: bool = True) -> Path:
+#     """Download a file from the specified URL to the given directory.
+#
+#     This function downloads a file from the provided URL and saves it in the
+#     specified directory. If the file already exists, it skips the download.
+#     The function also handles errors during the download process, such as
+#     network issues or user interruptions.
+#
+#         Args:
+#             url (HttpUrl): The URL of the file to be downloaded.
+#             directory (Path): The directory where the file should be saved.
+#
+#         Returns:
+#             Optional[Path]: The path to the downloaded file if successful, or
+#             None if the download failed.
+#
+#         Raises:
+#             KeyboardInterrupt: If the user interrupts the download process.
+#
+#         Example:
+#             >>> from pathlib import Path
+#             >>> download_file("http://example.com/file", Path("/tmp"))
+#             Downloaded: /tmp/file
+#             PosixPath('/tmp/file')
+#     """
+#     file_path, file_name = url_dir2path(url, directory)
+#     if file_path.exists():
+#         if v:
+#             print(f"File already downloaded: {file_name}")
+#         return file_path
+#     try:
+#         response = requests.get(str(url), stream=True, timeout=10)
+#         response.raise_for_status()
+#         total_size = int(response.headers.get("Content-Length", 0))
+#         with open(file_path, "wb") as f:
+#             with tqdm(
+#                 total=total_size, unit="B", unit_scale=True, desc=file_name
+#             ) as pbar:
+#                 for chunk in response.iter_content(chunk_size=8192):
+#                     f.write(chunk)
+#                     pbar.update(len(chunk))
+#         print(f"Downloaded: {file_path}")
+#         return file_path
+#     except requests.exceptions.RequestException as e:
+#         if file_path.exists():
+#             file_path.unlink()
+#         raise click.ClickException(f"Failed to download {file_name}: {e}")
+#     except KeyboardInterrupt:
+#         if file_path.exists():
+#             file_path.unlink()
+#         raise click.ClickException("Download interrupted by user.")
 
-    This function downloads a file from the provided URL and saves it in the
-    specified directory. If the file already exists, it skips the download.
-    The function also handles errors during the download process, such as
-    network issues or user interruptions.
 
-        Args:
-            url (HttpUrl): The URL of the file to be downloaded.
-            directory (Path): The directory where the file should be saved.
-
-        Returns:
-            Optional[Path]: The path to the downloaded file if successful, or
-            None if the download failed.
-
-        Raises:
-            KeyboardInterrupt: If the user interrupts the download process.
-
-        Example:
-            >>> from pathlib import Path
-            >>> download_file("http://example.com/file", Path("/tmp"))
-            Downloaded: /tmp/file
-            PosixPath('/tmp/file')
-    """
+def download_file(
+    url: str, directory: Path, v: bool = True, wait_interval: float = 2.0
+) -> Path:
+    """Download a file with atomic locking and integrity checks."""
     file_path, file_name = url_dir2path(url, directory)
-    if file_path.exists():
+    lock_path = file_path.with_suffix(file_path.suffix + ".lock")
+    temp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+    while lock_path.exists():
         if v:
-            print(f"File already downloaded: {file_name}")
-        return file_path
+            print(f"Download in progress by another process: {file_name}")
+        time.sleep(wait_interval)
+        if file_path.exists():
+            if v:
+                print(f"File already available: {file_name}")
+            return file_path
+    try:
+        if file_path.exists():
+            if v:
+                print(f"File already downloaded: {file_name}")
+            return file_path
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+    except FileExistsError:
+        return download_file(url, directory, v, wait_interval)
     try:
         response = requests.get(str(url), stream=True, timeout=10)
         response.raise_for_status()
         total_size = int(response.headers.get("Content-Length", 0))
-        with open(file_path, "wb") as f:
+        downloaded_size = 0
+        with open(temp_path, "wb") as f:
             with tqdm(
                 total=total_size, unit="B", unit_scale=True, desc=file_name
             ) as pbar:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
+                    downloaded_size += len(chunk)
                     pbar.update(len(chunk))
-        print(f"Downloaded: {file_path}")
+        temp_path.rename(file_path)
+        if v:
+            print(f"Successfully downloaded: {file_name}")
         return file_path
     except requests.exceptions.RequestException as e:
-        if file_path.exists():
-            file_path.unlink()
-        raise click.ClickException(f"Failed to download {file_name}: {e}")
+        for path in [temp_path, file_path]:
+            if path.exists():
+                path.unlink()
+        raise click.ClickException(f"Download failed: {file_name} - {e}")
     except KeyboardInterrupt:
-        if file_path.exists():
-            file_path.unlink()
-        raise click.ClickException("Download interrupted by user.")
+        for path in [temp_path, file_path]:
+            if path.exists():
+                path.unlink()
+        raise click.ClickException(" Download interrupted by user")
+    finally:
+        if lock_path.exists():
+            lock_path.unlink()
 
 
 def download_data(
