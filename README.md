@@ -18,7 +18,7 @@ TransCorpus enables the training of state-of-the-art language models through syn
 # Quick Start
 1. Clone and Install
 ```bash
-git clone git@github.com:jknafou/TransCorpus.git
+git clone https://github.com/jknafou/TransCorpus.git
 cd TransCorpus
 UV_INDEX_STRATEGY=unsafe-best-match rye sync
 source .venv/bin/activate
