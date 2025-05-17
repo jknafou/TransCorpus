@@ -61,7 +61,7 @@ Check out [TransBERT-bio-fr on Hugging Face 🤗](https://huggingface.co/jknafou
 
 
 ## New corpus upload
-One can easily add its own corpus (along with a demo) to the repo following the same schema of domains.json:
+One can easily add its own corpus (along with a demo) to the repo following the same schema of ```domains.json```:
 ```json
     "bio": {
         "database": {
@@ -84,7 +84,7 @@ One can easily add its own corpus (along with a demo) to the repo following the 
         "language": "en"
     }
 ```
-Where each line of the corpus is a different document.
+Where each line of the corpus is a different document. For the moment, a life-science corpus is available comprising about 28GB of raw text, 22M of abstracts from PubMed. The database it is made of can also be downloaded using ```transcorpus download-database bio```.
 
 # Deployment
 ## Requirements:
