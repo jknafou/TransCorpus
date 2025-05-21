@@ -1,18 +1,28 @@
-#!/usr/bin/env zsh
-# -*- mode: zsh; sh-indentation: 2; indent-tabs-mode: nil; sh-basic-offset: 2; -*-
-# vim: ft=zsh sw=2 ts=2 et
+#!/bin/bash
+#SBATCH --job-name LM_TRAINING            # this is a parameter to help you sort your job when listing it
+#SBATCH --error LM_TRAINING-error.e%j     # optional. By default a file slurm-{jobid}.out will be created
+#SBATCH --output LM_TRAINING-out.o%j      # optional. By default the error and output files are merged
+#SBATCH --ntasks=1
+#SBATCH --partition private-ruch-gpu
+#SBATCH --gpus=3
+#SBATCH --exclusive
+#SBATCH --time=7-00:00:00
 
-# Multi-GPU Translation Pipeline
-# Usage: ./multi_GPU.sh [corpus_name] [target_language] [preprocess_workers] [num_splits]
+# Usage: ./example/SLURM.sh [corpus_name] [target_language] [preprocess_workers] [num_splits]
+# Usage example: sbatch ./example/SLURM.sh bio es 5 1000
+
+# for baobab
+ml GCCcore/14.2.0
+ml CUDA/12.3.0
 
 # Enable strict error handling
 set -euo pipefail
 trap 'cleanup' EXIT INT TERM
 
 # Configuration
-MAX_TOKENS_GPU0=40000
-MAX_TOKENS_GPU1=35000
-MAX_TOKENS_GPU2=30000
+MAX_TOKENS_GPU0=24320
+MAX_TOKENS_GPU1=24320
+MAX_TOKENS_GPU2=24320
 LOG_DIR="logs"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -81,15 +91,16 @@ main() {
   mkdir -p "${LOG_DIR}/${TIMESTAMP}"
 
   echo -e "\n${GREEN}${BOLD}[1/4] Setting up environment...${RESET}"
+  rm requirement*
   UV_INDEX_STRATEGY=unsafe-best-match rye sync
   source .venv/bin/activate
 
   echo -e "\n${GREEN}${BOLD}[2/4] Downloading corpus...${RESET}"
-  transcorpus download-corpus "${corpus_name}" -d 2>&1 | tee "${LOG_DIR}/${TIMESTAMP}/download.log"
+  transcorpus download-corpus "${corpus_name}"   2>&1 | tee "${LOG_DIR}/${TIMESTAMP}/download.log"
 
   echo -e "\n${GREEN}${BOLD}[3/4] Starting translation workers...${RESET}"
   echo "${BLUE}${BOLD}Starting GPU 0 worker (max_tokens=${MAX_TOKENS_GPU0})${RESET}"
-  CUDA_VISIBLE_DEVICES=0 transcorpus translate "${corpus_name}" "${target_lang}" -d \
+  CUDA_VISIBLE_DEVICES=0 transcorpus translate "${corpus_name}" "${target_lang}"   \
     --num-splits "${num_splits}" --max-tokens "${MAX_TOKENS_GPU0}" \
     2>&1 | tee "${LOG_DIR}/${TIMESTAMP}/translate_gpu0.log" &
   bg_pids+=($!)
@@ -97,7 +108,7 @@ main() {
   sleep 10  # Stagger GPU workers
 
   echo "${BLUE}${BOLD}Starting GPU 1 worker (max_tokens=${MAX_TOKENS_GPU1})${RESET}"
-  CUDA_VISIBLE_DEVICES=1 transcorpus translate "${corpus_name}" "${target_lang}" -d \
+  CUDA_VISIBLE_DEVICES=1 transcorpus translate "${corpus_name}" "${target_lang}"   \
     --num-splits "${num_splits}" --max-tokens "${MAX_TOKENS_GPU1}" \
     2>&1 | tee "${LOG_DIR}/${TIMESTAMP}/translate_gpu1.log" &
   bg_pids+=($!)
@@ -105,15 +116,17 @@ main() {
   sleep 10  # Stagger GPU workers
 
   echo "${BLUE}${BOLD}Starting GPU 2 worker (max_tokens=${MAX_TOKENS_GPU2})${RESET}"
-  CUDA_VISIBLE_DEVICES=2 transcorpus translate "${corpus_name}" "${target_lang}" -d \
+  CUDA_VISIBLE_DEVICES=2 transcorpus translate "${corpus_name}" "${target_lang}"   \
     --num-splits "${num_splits}" --max-tokens "${MAX_TOKENS_GPU2}" \
     2>&1 | tee "${LOG_DIR}/${TIMESTAMP}/translate_gpu2.log" &
   bg_pids+=($!)
 
+  sleep 10
+
   echo -e "\n${GREEN}${BOLD}[4/4] Starting preprocessing workers...${RESET}"
   for ((worker=0; worker<num_worker_preprocess; worker++)); do
     echo "${BLUE}${BOLD}Starting preprocess worker ${worker}${RESET}"
-    transcorpus preprocess "${corpus_name}" "${target_lang}" -d --num-splits "${num_splits}" \
+    transcorpus preprocess "${corpus_name}" "${target_lang}"   --num-splits "${num_splits}" \
       2>&1 | tee "${LOG_DIR}/${TIMESTAMP}/preprocess_${worker}.log" &
     bg_pids+=($!)
   done

@@ -262,44 +262,62 @@ def run_translation(
         documents_sentences_ids_path,
     ) = result
     if split_stage < 3:
-        model_translation_path, model_dictionary_path, language_pairs_path = (
-            get_model_assets(
+        try:
+            (
+                model_translation_path,
+                model_dictionary_path,
+                language_pairs_path,
+            ) = get_model_assets(
                 model_path=model_path,
                 transcorpus_dir=transcorpus_dir,
             )
-        )
-        generate_translation(
-            data_bin_dir=dest_dir,
-            model_path=model_translation_path,
-            source_language=source_language,
-            target_language=target_language,
-            results_path=dest_dir,
-            fixed_dictionary=model_dictionary_path,
-            lang_pairs=language_pairs_path,
-            max_tokens=max_tokens,
-        )
-        for item in dest_dir.iterdir():
-            if item.is_file() and item.name != "generate-test.txt":
-                item.unlink(missing_ok=True)
-        checkpoint_db.update_stage(split_index, 3)
+            generate_translation(
+                data_bin_dir=dest_dir,
+                model_path=model_translation_path,
+                source_language=source_language,
+                target_language=target_language,
+                results_path=dest_dir,
+                fixed_dictionary=model_dictionary_path,
+                lang_pairs=language_pairs_path,
+                max_tokens=max_tokens,
+            )
+            for item in dest_dir.iterdir():
+                if item.is_file() and item.name != "generate-test.txt":
+                    item.unlink(missing_ok=True)
+            checkpoint_db.update_stage(split_index, 3)
+        except Exception as e:
+            click.secho(
+                "Error during translation generation. Please check the model path and try again.",
+                fg="red",
+            )
+            checkpoint_db.update_stage(split_index, 0)
+            raise e
     if split_stage < 4:
-        with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
-            documents_sentences_ids = f.read().strip().split("_")
-        retrieve_translation(
-            dest_dir,
-            documents_sentences_ids,
-        )
-        generated_translation_path = dest_dir / "generate-test.txt"
-        generated_translation_path.unlink(missing_ok=True)
-        dest_dir.rmdir()
-        # @new_feature documents_sentences_ids_path can be used to
-        # translate the same splits in other languages (same for tokenized
-        # files, but their size is much larger), if you want to keep them,
-        # comment the next line and the tokenized file deletion too.
-        # Modification of the stages handling should also take that into
-        # account. (default 1 after first pass).
-        documents_sentences_ids_path.unlink(missing_ok=True)
-        checkpoint_db.update_stage(split_index, 4)
+        try:
+            with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
+                documents_sentences_ids = f.read().strip().split("_")
+            retrieve_translation(
+                dest_dir,
+                documents_sentences_ids,
+            )
+            generated_translation_path = dest_dir / "generate-test.txt"
+            generated_translation_path.unlink(missing_ok=True)
+            dest_dir.rmdir()
+            # @new_feature documents_sentences_ids_path can be used to
+            # translate the same splits in other languages (same for tokenized
+            # files, but their size is much larger), if you want to keep them,
+            # comment the next line and the tokenized file deletion too.
+            # Modification of the stages handling should also take that into
+            # account. (default 1 after first pass).
+            documents_sentences_ids_path.unlink(missing_ok=True)
+            checkpoint_db.update_stage(split_index, 4)
+        except Exception as e:
+            click.secho(
+                "Error during translation retrieval. Please check the model path and try again.",
+                fg="red",
+            )
+            checkpoint_db.update_stage(split_index, 0)
+            raise e
     uncompleted_splits = checkpoint_db.get_len_uncompleted_splits()
     if uncompleted_splits == 1:
         merge_splits(
