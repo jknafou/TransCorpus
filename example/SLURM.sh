@@ -20,9 +20,9 @@ set -euo pipefail
 trap 'cleanup' EXIT INT TERM
 
 # Configuration
-MAX_TOKENS_GPU0=24320
-MAX_TOKENS_GPU1=24320
-MAX_TOKENS_GPU2=24320
+MAX_TOKENS_GPU0=35000
+MAX_TOKENS_GPU1=35000
+MAX_TOKENS_GPU2=35000
 LOG_DIR="logs"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -137,5 +137,3 @@ main() {
 }
 
 main "$@"
-
-
