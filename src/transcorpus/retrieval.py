@@ -85,7 +85,7 @@ from transcorpus.utils import get_domain_url, url_dir2path
 
 
 def download_file(
-    url: str, directory: Path, v: bool = True, wait_interval: float = 2.0
+    url: HttpUrl, directory: Path, v: bool = True, wait_interval: float = 2.0
 ) -> Path:
     """Download a file with atomic locking and integrity checks."""
     file_path, file_name = url_dir2path(url, directory)

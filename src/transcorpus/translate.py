@@ -1,17 +1,13 @@
 from fairseq.checkpoint_utils import checkpoint_paths
 import gc
-import shutil
 import psutil
-import time
 
 from transcorpus.translation_checkpointing import TranslationCheckpointing
-import sys, re
+import re
 from tqdm import tqdm
-import logging
 
 import nltk
 from pydantic import HttpUrl
-import logging
 
 try:
     nltk.data.find("tokenizers/punkt")
@@ -19,7 +15,6 @@ except LookupError:
     nltk.download("punkt")
 
 import os
-import warnings
 from pathlib import Path
 from typing import Optional, get_args
 
@@ -29,21 +24,13 @@ from fairseq.options import (
     parse_args_and_arch,
 )
 from fairseq_cli.generate import main as generate_main
-from omegaconf import OmegaConf
-from fairseq.dataclass.configs import FairseqConfig
 import torch
 import argparse
 
 
 from transcorpus.languages import M2M100_Languages
-from transcorpus.preprocess import spm_encode
-from transcorpus.retrieval import SuffixModel, download_file
-import sys
-from pydocstyle.wordlists import stem
+from transcorpus.retrieval import download_file
 from transcorpus.utils import preview_proposal_messsage
-from transcorpus.preprocess import process_split
-from transcorpus.preprocess import sentence_splitter
-from transcorpus.preprocess import preprocess_data
 from transcorpus.preprocess import run_preprocess
 
 
@@ -120,7 +107,7 @@ def generate_translation(
         parser = get_generation_parser()
         args = parse_args_and_arch(parser, args_list)
 
-        parent_process = psutil.Process()
+        # parent_process = psutil.Process()
         with torch.serialization.safe_globals([argparse.Namespace]):
             generate_main(args)
 
@@ -150,6 +137,7 @@ def retrieve_translation(
     dest_dir: Path,
     documents_sentences_ids: list[str],
     split_index: int,
+    checkpoint_db: TranslationCheckpointing,
 ):
     try:
         click.secho(
@@ -314,6 +302,7 @@ def run_translation(
                 dest_dir,
                 documents_sentences_ids,
                 split_index=split_index,
+                checkpoint_db=checkpoint_db,
             )
             generated_translation_path = dest_dir / "generate-test.txt"
             generated_translation_path.unlink(missing_ok=True)
