@@ -1,4 +1,5 @@
 from fairseq.checkpoint_utils import checkpoint_paths
+import gc
 import shutil
 import psutil
 import time
@@ -46,28 +47,25 @@ from transcorpus.preprocess import preprocess_data
 from transcorpus.preprocess import run_preprocess
 
 
-def kill_data_workers(process_list):
-    """Force terminate a list of PyTorch DataLoader workers and their descendants."""
-    # First try SIGTERM (polite request to terminate)
-    for proc in process_list:
-        try:
-            proc.terminate()
-        except psutil.NoSuchProcess:
-            pass
-
-    # Wait up to 3 seconds for processes to exit
-    gone, alive = psutil.wait_procs(process_list, timeout=3)
-
-    # Force kill any remaining processes with SIGKILL
-    for proc in alive:
-        try:
-            proc.kill()
-        except psutil.NoSuchProcess:
-            pass
-
-    # Final verification
-    remaining = [p for p in process_list if p.is_running()]
-    return len(remaining) == 0
+# def kill_data_workers(process_list):
+#     """Force terminate a list of PyTorch DataLoader workers and their descendants."""
+#     for proc in process_list:
+#         try:
+#             proc.terminate()
+#         except psutil.NoSuchProcess:
+#             pass
+#
+#     gone, alive = psutil.wait_procs(process_list, timeout=3)
+#
+#     for proc in alive:
+#         try:
+#             proc.kill()
+#         except psutil.NoSuchProcess:
+#             pass
+#
+#     # Final verification
+#     remaining = [p for p in process_list if p.is_running()]
+#     return len(remaining) == 0
 
 
 def generate_translation(
@@ -75,110 +73,131 @@ def generate_translation(
     model_path: Path,  # Model checkpoint path
     source_language: M2M100_Languages,
     target_language: M2M100_Languages,
+    split_index: int,
+    checkpoint_db: TranslationCheckpointing,
     results_path: Path,
     fixed_dictionary: Path,
     lang_pairs: Path,
     max_tokens: int,
 ):
-    click.secho(
-        "Generating translations using the trained model.",
-        fg="green",
-    )
-    args_list = [
-        str(data_bin_dir),
-        "--path",
-        str(model_path),
-        "--fixed-dictionary",
-        str(fixed_dictionary),
-        "-s",
-        source_language,
-        "-t",
-        target_language,
-        "--results-path",
-        str(results_path),
-        "--num-workers",
-        "8",
-        "--fp16",
-        "--required-batch-size-multiple",
-        "1",
-        "--max-tokens",
-        str(max_tokens),
-        "--max-len-a",
-        "1.5",
-        "--remove-bpe",
-        "sentencepiece",
-        "--task",
-        "translation_multi_simple_epoch",
-        "--lang-pairs",
-        str(lang_pairs),
-        "--decoder-langtok",
-        "--encoder-langtok",
-        "src",
-    ]
-
-    parser = get_generation_parser()
-    args = parse_args_and_arch(parser, args_list)
-
-    parent_process = psutil.Process()
-    with torch.serialization.safe_globals([argparse.Namespace]):
-        generate_main(args)
-
-    timeout = 60
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        current_children = parent_process.children(recursive=True)
-        if not current_children:
-            break
-        time.sleep(2)
-        kill_data_workers(current_children)
-    else:
+    try:
         click.secho(
-            "Warning: Subprocesses did not terminate within timeout!",
-            fg="yellow",
+            "Generating translations using the trained model.",
+            fg="green",
         )
+        args_list = [
+            str(data_bin_dir),
+            "--path",
+            str(model_path),
+            "--fixed-dictionary",
+            str(fixed_dictionary),
+            "-s",
+            source_language,
+            "-t",
+            target_language,
+            "--results-path",
+            str(results_path),
+            "--num-workers",
+            "8",
+            "--fp16",
+            "--required-batch-size-multiple",
+            "1",
+            "--max-tokens",
+            str(max_tokens),
+            "--max-len-a",
+            "1.5",
+            "--remove-bpe",
+            "sentencepiece",
+            "--task",
+            "translation_multi_simple_epoch",
+            "--lang-pairs",
+            str(lang_pairs),
+            "--decoder-langtok",
+            "--encoder-langtok",
+            "src",
+        ]
+
+        parser = get_generation_parser()
+        args = parse_args_and_arch(parser, args_list)
+
+        parent_process = psutil.Process()
+        with torch.serialization.safe_globals([argparse.Namespace]):
+            generate_main(args)
+
+        gc.collect()
+        torch.cuda.empty_cache()
+        # timeout = 60
+        # start_time = time.time()
+        # while time.time() - start_time < timeout:
+        #     current_children = parent_process.children(recursive=True)
+        #     if not current_children:
+        #         break
+        #     time.sleep(2)
+        #     kill_data_workers(current_children)
+        # else:
+        #     click.secho(
+        #         "Warning: Subprocesses did not terminate within timeout!",
+        #         fg="yellow",
+        #     )
+    except Exception as e:
+        checkpoint_db.set_pending(split_index)
+        raise click.UsageError(
+            f"An error occurred during translation generation: {e}"
+        ) from e
 
 
 def retrieve_translation(
     dest_dir: Path,
     documents_sentences_ids: list[str],
+    split_index: int,
 ):
-    click.secho(
-        "Retrieving translations from the generated output.",
-        fg="green",
-    )
-    generated_translation_path = dest_dir / "generate-test.txt"
-    filesize = os.path.getsize(generated_translation_path)
-    translated_pattern = re.compile("^D-[0-9]+")
-    translation_dict = {}
-    with open(generated_translation_path, encoding="utf-8") as f:
-        pbar = tqdm(
-            total=filesize,
-            unit="B",
-            unit_scale=True,
-            desc="Retrieving translations",
+    try:
+        click.secho(
+            "Retrieving translations from the generated output.",
+            fg="green",
         )
-        for line in f:
-            pbar.update(len(line))
-            if translated_pattern.search(line):
-                i, score, sentence = line.split("\t")
-                translation_dict[int(i.split("-")[-1])] = sentence.rstrip()
+        generated_translation_path = dest_dir / "generate-test.txt"
+        filesize = os.path.getsize(generated_translation_path)
+        translated_pattern = re.compile("^D-[0-9]+")
+        translation_dict = {}
+        with open(generated_translation_path, encoding="utf-8") as f:
+            pbar = tqdm(
+                total=filesize,
+                unit="B",
+                unit_scale=True,
+                desc="Retrieving translations",
+            )
+            for line in f:
+                pbar.update(len(line))
+                if translated_pattern.search(line):
+                    i, score, sentence = line.split("\t")
+                    translation_dict[int(i.split("-")[-1])] = sentence.rstrip()
 
-    assert len(translation_dict) == len(documents_sentences_ids), (
-        "The number of generated translations does not match the number of sentences in the input file."
-        f"Length of generated translations: {len(translation_dict)}, Length of input sentences: {len(documents_sentences_ids)}"
-    )
-    current_id = None
-    with open(dest_dir.as_posix() + ".txt", encoding="utf-8", mode="w") as f:
-        for i, doc_id in enumerate(
-            tqdm(documents_sentences_ids, desc="Writing translations")
-        ):
-            if current_id is not None and doc_id != current_id:
-                f.write("\n")  # Add newline AFTER the previous document ends
-            f.write(
-                translation_dict[i].strip() + " "
-            )  # Trim existing newlines in sentences
-            current_id = doc_id
-        f.write("\n")  # Add newline AFTER the last document ends
+        assert len(translation_dict) == len(documents_sentences_ids), (
+            "The number of generated translations does not match the number of sentences in the input file."
+            f"Length of generated translations: {len(translation_dict)}, Length of input sentences: {len(documents_sentences_ids)}"
+        )
+        current_id = None
+        with open(
+            dest_dir.as_posix() + ".txt", encoding="utf-8", mode="w"
+        ) as f:
+            for i, doc_id in enumerate(
+                tqdm(documents_sentences_ids, desc="Writing translations")
+            ):
+                if current_id is not None and doc_id != current_id:
+                    f.write(
+                        "\n"
+                    )  # Add newline AFTER the previous document ends
+                f.write(
+                    translation_dict[i].strip() + " "
+                )  # Trim existing newlines in sentences
+                current_id = doc_id
+            f.write("\n")  # Add newline AFTER the last document ends
+    except Exception as e:
+        checkpoint_db.set_pending(split_index)
+        raise click.UsageError(
+            f"An error occurred during translation retrieval: {e}"
+        ) from e
 
 
 def merge_splits(
@@ -212,11 +231,6 @@ def get_model_assets(
 ) -> tuple[Path, Path, Path]:
     path_tuple = []
     for m in ["model_url", "model_dictionary_url", "model_language_pairs_url"]:
-        if m == "model_url":
-            click.secho(
-                "Downloading the model. This may take a while.",
-                fg="green",
-            )
         path_tuple.append(
             download_file(
                 url=HttpUrl(model_path[m]),
@@ -262,44 +276,61 @@ def run_translation(
         documents_sentences_ids_path,
     ) = result
     if split_stage < 3:
-        model_translation_path, model_dictionary_path, language_pairs_path = (
-            get_model_assets(
+        try:
+            (
+                model_translation_path,
+                model_dictionary_path,
+                language_pairs_path,
+            ) = get_model_assets(
                 model_path=model_path,
                 transcorpus_dir=transcorpus_dir,
             )
-        )
-        generate_translation(
-            data_bin_dir=dest_dir,
-            model_path=model_translation_path,
-            source_language=source_language,
-            target_language=target_language,
-            results_path=dest_dir,
-            fixed_dictionary=model_dictionary_path,
-            lang_pairs=language_pairs_path,
-            max_tokens=max_tokens,
-        )
-        for item in dest_dir.iterdir():
-            if item.is_file() and item.name != "generate-test.txt":
-                item.unlink(missing_ok=True)
-        checkpoint_db.update_stage(split_index, 3)
+            generate_translation(
+                data_bin_dir=dest_dir,
+                model_path=model_translation_path,
+                source_language=source_language,
+                target_language=target_language,
+                split_index=split_index,
+                checkpoint_db=checkpoint_db,
+                results_path=dest_dir,
+                fixed_dictionary=model_dictionary_path,
+                lang_pairs=language_pairs_path,
+                max_tokens=max_tokens,
+            )
+            for item in dest_dir.iterdir():
+                if item.is_file() and item.name != "generate-test.txt":
+                    item.unlink(missing_ok=True)
+            checkpoint_db.update_stage(split_index, 3)
+        except Exception as e:
+            checkpoint_db.set_pending(split_index)
+            raise click.UsageError(
+                f"An error occurred during translation generation: {e}"
+            ) from e
     if split_stage < 4:
-        with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
-            documents_sentences_ids = f.read().strip().split("_")
-        retrieve_translation(
-            dest_dir,
-            documents_sentences_ids,
-        )
-        generated_translation_path = dest_dir / "generate-test.txt"
-        generated_translation_path.unlink(missing_ok=True)
-        dest_dir.rmdir()
-        # @new_feature documents_sentences_ids_path can be used to
-        # translate the same splits in other languages (same for tokenized
-        # files, but their size is much larger), if you want to keep them,
-        # comment the next line and the tokenized file deletion too.
-        # Modification of the stages handling should also take that into
-        # account. (default 1 after first pass).
-        documents_sentences_ids_path.unlink(missing_ok=True)
-        checkpoint_db.update_stage(split_index, 4)
+        try:
+            with open(documents_sentences_ids_path, "r", encoding="utf-8") as f:
+                documents_sentences_ids = f.read().strip().split("_")
+            retrieve_translation(
+                dest_dir,
+                documents_sentences_ids,
+                split_index=split_index,
+            )
+            generated_translation_path = dest_dir / "generate-test.txt"
+            generated_translation_path.unlink(missing_ok=True)
+            dest_dir.rmdir()
+            # @new_feature documents_sentences_ids_path can be used to
+            # translate the same splits in other languages (same for tokenized
+            # files, but their size is much larger), if you want to keep them,
+            # comment the next line and the tokenized file deletion too.
+            # Modification of the stages handling should also take that into
+            # account. (default 1 after first pass).
+            documents_sentences_ids_path.unlink(missing_ok=True)
+            checkpoint_db.update_stage(split_index, 4)
+        except Exception as e:
+            checkpoint_db.set_pending(split_index)
+            raise click.UsageError(
+                f"An error occurred during translation retrieval: {e}"
+            ) from e
     uncompleted_splits = checkpoint_db.get_len_uncompleted_splits()
     if uncompleted_splits == 1:
         merge_splits(

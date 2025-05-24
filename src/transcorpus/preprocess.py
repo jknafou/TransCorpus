@@ -687,7 +687,7 @@ def sentence_binarize(
             f"Error during binarization: {e}",
             fg="red",
         )
-        checkpoint_db.update_stage(split_index, 0)
+        checkpoint_db.update_stage(split_index, 1)
         checkpoint_db.set_pending(split_index)
 
 
