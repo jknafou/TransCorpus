@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name LM_TRAINING            # this is a parameter to help you sort your job when listing it
-#SBATCH --error LM_TRAINING-error.e%j     # optional. By default a file slurm-{jobid}.out will be created
-#SBATCH --output LM_TRAINING-out.o%j      # optional. By default the error and output files are merged
+#SBATCH --job-name TRANSCORPUS            # this is a parameter to help you sort your job when listing it
+#SBATCH --error TRANSCORPUS-error.e%j     # optional. By default a file slurm-{jobid}.out will be created
+#SBATCH --output TRANSCORPUS-out.o%j      # optional. By default the error and output files are merged
 #SBATCH --ntasks=1
 #SBATCH --partition private-ruch-gpu
 #SBATCH --gpus=3
