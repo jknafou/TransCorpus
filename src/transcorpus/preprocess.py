@@ -6,6 +6,8 @@ from __future__ import (
 )
 
 import nltk
+import math
+
 
 try:
     nltk.data.find("tokenizers/punkt")
@@ -234,16 +236,22 @@ def get_tokenizer_assets(
     return sentence_tokenizer, model_tokenizer_path
 
 
+def split_evenly(tokens, max_tokens):
+    n = len(tokens)
+    if n <= max_tokens:
+        return [tokens]
+    num_chunks = math.ceil(n / max_tokens)
+    chunk_size = math.ceil(n / num_chunks)
+    return [
+        tokens[i * chunk_size : (i + 1) * chunk_size] for i in range(num_chunks)
+    ]
+
+
 def spm_encode(
-    model: Path,
+    sp: spm.SentencePieceProcessor,
     doc_sentences: List[str],
-):
-    sp = spm.SentencePieceProcessor()
-    sp.Load(model.as_posix())
-
-    def encode(input):
-        return sp.EncodeAsPieces(input)
-
+    max_tokens: int = 1024,
+) -> tuple[List[str], dict]:
     stats = {
         "num_empty": 0,
     }
@@ -251,22 +259,25 @@ def spm_encode(
     def encode_line(line):
         line = line.strip()
         if len(line) > 0:
-            line = encode(line)
-            return line
+            tokens = sp.EncodeAsPieces(line)
+            chunks = split_evenly(tokens, max_tokens)
+            return chunks
         else:
             stats["num_empty"] += 1
         return None
 
-    for i, doc_line in enumerate(doc_sentences):
-        enc_line = encode_line(doc_line)
-        if enc_line is not None:
-            doc_sentences[i] = " ".join(enc_line)
+    new_sentences = []
+    for doc_line in doc_sentences:
+        enc_chunks = encode_line(doc_line)
+        if enc_chunks is not None:
+            for chunk in enc_chunks:
+                new_sentences.append(" ".join(chunk))
         else:
             click.secho(
                 f"Empty line found. Skipping.",
                 fg="yellow",
             )
-    return doc_sentences, stats
+    return new_sentences, stats
 
 
 def preprocess_data(
@@ -330,10 +341,11 @@ def too_small_sentence_concat(sentences, too_small_sentences_length=10):
 def sentence_splitter(text, tokenizer):
     text = list(tokenizer.tokenize(text))
     text = too_small_sentence_concat(text)
-    abstract = []
+    document = []
     for sentence in text:
-        abstract.append(sentence)
-    return abstract
+        if sentence.strip():
+            document.append(sentence.strip())
+    return document
 
 
 def process_split(filename, split_index, num_splits, message=""):
@@ -549,6 +561,8 @@ def tokenize_split_by_sentence(
         )
         temp_tokenized = file_to_tmp(tokenized_split_path)
         temp_ids = file_to_tmp(documents_sentences_ids_path)
+        sp = spm.SentencePieceProcessor()
+        sp.Load(model_tokenizer_path.as_posix())
         documents_sentences_ids = []
         with open(
             temp_tokenized,
@@ -573,10 +587,12 @@ def tokenize_split_by_sentence(
                         document = sentence_splitter(
                             document, sentence_tokenizer
                         )
-                        documents_sentences_ids.extend([f"{i}"] * len(document))
                         document, stats = spm_encode(
-                            model_tokenizer_path, document
+                            sp=sp,
+                            doc_sentences=document,
+                            max_tokens=1024,
                         )
+                        documents_sentences_ids.extend([f"{i}"] * len(document))
                         for sentence in document:
                             f.write(sentence + "\n")
                     else:
