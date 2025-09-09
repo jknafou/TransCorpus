@@ -52,8 +52,8 @@ The following example translates the bio corpus (PubMed) of about 30GB, preproce
 ```
 
 # Research-Proven Performance
-## Paper to be submitted to EMNLP2025
-TransCorpus enables the training of state-of-the-art language models through synthetic translation. For example, TransBERT achieved superior performance by leveraging corpus translation with this toolkit. A paper detailing these results will be submitted to EMNLP 2025. 📝 [Current Paper Version](https://transbert.s3.text-analytics.ch/TransBERT.pdf). If you use this toolkit, please cite:
+## Paper to be accepted at EMNLP2025
+TransCorpus enables the training of state-of-the-art language models through synthetic translation. For example, TransBERT achieved superior performance by leveraging corpus translation with this toolkit. The paper detailing these results has been accepted at EMNLP2025. 📝 [Current Paper Version](https://transbert.s3.text-analytics.ch/TransBERT.pdf). If you use this toolkit, please cite:
 
 ```text
   @inproceedings{
